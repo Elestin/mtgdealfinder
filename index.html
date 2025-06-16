@@ -1,31 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive MTG Price Analyzer - Advanced</title>
+    <title>Interactive MTG Price Analyzer - Professional Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Warm Neutral Harmony -->
-    <!-- Application Structure Plan: Simplified to a single-session, client-side tool. The user flow is direct: Input -> Analyze -> Results. All authentication and database logic has been removed to create a streamlined, immediate-use application. -->
-    <!-- Visualization & Content Choices: Retains the core feature set for analysis: grouped bar chart, floating card image on hover, net profit/loss summary, sorting controls, and CSV export. The focus is on providing a rich analysis experience within a single session. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script>
+        // Set theme on initial load
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-        .chart-container { position: relative; width: 100%; max-width: 900px; margin-left: auto; margin-right: auto; height: 400px; max-height: 50vh; }
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg-color: #ffffff;
+            --text-color: #1f2937;
+            --subtle-text-color: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow-color: rgba(0,0,0,0.1);
+        }
+        .dark {
+            --bg-color: #111827;
+            --card-bg-color: #1f2937;
+            --text-color: #f9fafb;
+            --subtle-text-color: #9ca3af;
+            --border-color: #374151;
+            --shadow-color: rgba(0,0,0,0.3);
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: background-color 0.3s, color 0.3s; }
+        .card { background-color: var(--card-bg-color); border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px var(--shadow-color); }
+        .chart-container, .doughnut-container { position: relative; width: 100%; margin-left: auto; margin-right: auto; }
+        .chart-container { max-width: 900px; height: 400px; max-height: 50vh; }
+        .doughnut-container { max-width: 300px; height: 300px; }
         @media (min-width: 768px) { .chart-container { height: 500px; } }
         .highlight-green { background-color: #e6f4ea; color: #1e4620; border-left: 4px solid #4caf50; }
         .highlight-red { background-color: #fdecea; color: #611a15; border-left: 4px solid #f44336; }
+        .dark .highlight-green { background-color: #16331a; color: #a7f3d0; border-left-color: #6ee7b7; }
+        .dark .highlight-red { background-color: #3b1514; color: #fecaca; border-left-color: #f87171; }
         .highlight-gray { background-color: #f3f4f6; color: #4b5563; }
-        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #fff; animation: spin 1s ease infinite; }
+        .dark .highlight-gray { background-color: #374151; color: #d1d5db; }
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.2); width: 24px; height: 24px; border-radius: 50%; border-left-color: #fff; animation: spin 1s ease infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #card-image-preview {
-            position: fixed; z-index: 1000; pointer-events: none; display: none;
-            transition: opacity 0.1s; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background-color: rgba(0, 0, 0, 0.6); display: flex;
@@ -34,67 +56,74 @@
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal-content {
-            background: white; padding: 2rem; border-radius: 1rem;
+            background: var(--card-bg-color); padding: 2rem; border-radius: 1rem;
             max-width: 90vw; max-height: 90vh; overflow-y: auto;
             width: 800px; transform: scale(0.95); transition: transform 0.3s ease;
         }
         .modal-overlay.active .modal-content { transform: scale(1); }
-        .trend-up { color: #4caf50; }
-        .trend-down { color: #f44336; }
-        .trend-stable { color: #9e9e9e; }
+        .trend-up { color: #4caf50; } .dark .trend-up { color: #6ee7b7; }
+        .trend-down { color: #f44336; } .dark .trend-down { color: #f87171; }
+        .trend-stable { color: #9e9e9e; } .dark .trend-stable { color: #6b7280; }
     </style>
 </head>
-<body class="bg-[#f8f9fa]">
+<body class="antialiased">
 
-    <img id="card-image-preview" src="" alt="Card Image Preview" class="w-48">
+    <img id="card-image-preview" src="" alt="Card Image Preview" class="w-48 rounded-lg shadow-2xl">
 
     <div id="card-modal" class="modal-overlay">
-        <div class="modal-content">
+        <div class="modal-content card">
              <div id="modal-body" class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start"></div>
         </div>
     </div>
 
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="text-center mb-10">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">MTG Market Price Analyzer</h1>
-            <p class="mt-2 text-md text-gray-600">Your Advanced Collection Valuation Tool</p>
+        <header class="flex justify-between items-center mb-10">
+            <div class="text-left">
+                <h1 class="text-3xl md:text-4xl font-bold">MTG Deal Finder</h1>
+                <p class="mt-2 text-md text-subtle-text-color">Find the Best Deals for Your Collection</p>
+            </div>
+            <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                <svg id="theme-icon-light" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg id="theme-icon-dark" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
         </header>
 
         <main class="space-y-12">
-            <section class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
-                 <div class="prose max-w-none mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-700">Analyze Your Collection</h2>
-                    <p>Paste your list below. The tool will automatically detect card names, prices, currencies, and foil versions.</p>
+            <section class="card p-6 md:p-8 rounded-2xl">
+                 <div class="prose max-w-none mb-6 dark:prose-invert">
+                    <h2 class="text-2xl font-semibold">Paste Your List to Find Deals</h2>
+                    <p>For specific sets, use format: <code class="text-sm">Card Name (SET)</code> or <code class="text-sm">Card Name {SET}</code>.</p>
                 </div>
                 <form id="card-form">
-                     <textarea id="bulk-card-input" class="w-full h-64 p-3 border border-gray-300 rounded-md shadow-sm font-mono text-sm"></textarea>
+                     <textarea id="bulk-card-input" class="w-full h-64 p-3 border rounded-md shadow-sm font-mono text-sm bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"></textarea>
                     <div class="flex flex-wrap items-center gap-4 mt-4">
                         <button type="submit" id="analyze-btn" class="flex-grow md:flex-grow-0 w-auto flex items-center gap-2 justify-center text-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition">Analyze</button>
                         <div class="relative">
-                            <label for="currency-select" class="text-sm font-medium text-gray-600 mr-2">Display:</label>
-                            <select id="currency-select" class="rounded-lg border-gray-300 shadow-sm">
+                            <label for="currency-select" class="text-sm font-medium text-subtle-text-color mr-2">Display:</label>
+                            <select id="currency-select" class="rounded-lg border-gray-300 dark:border-gray-600 shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                                 <option value="USD">USD ($)</option> <option value="EUR">EUR (€)</option> <option value="GBP">GBP (£)</option>
                             </select>
                         </div>
+                         <button type="button" id="load-last-btn" class="hidden flex-grow md:flex-grow-0 w-auto px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition">Load Last List</button>
                     </div>
                 </form>
             </section>
 
             <section id="results-section" class="hidden">
                 <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
-                    <h2 class="text-2xl font-semibold text-gray-700">Market Analysis Results</h2>
+                    <h2 class="text-2xl font-semibold">Your Deal Analysis</h2>
                     <div class="flex gap-2">
                         <button id="share-btn" class="px-4 py-2 bg-blue-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-blue-700 transition">Share</button>
                         <button id="export-csv-btn" class="px-4 py-2 bg-gray-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-gray-700 transition">Export CSV</button>
                     </div>
                 </div>
-                 <div id="summary-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center"></div>
-                <div id="filter-controls" class="hidden mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-lg shadow-md">
-                    <span class="font-semibold text-gray-700">Filter by:</span>
-                    <select id="rarity-filter" class="rounded-lg border-gray-300 shadow-sm"><option value="all">All Rarities</option></select>
-                    <select id="type-filter" class="rounded-lg border-gray-300 shadow-sm"><option value="all">All Types</option></select>
+                <div id="summary-section"></div>
+                <div id="filter-controls" class="hidden my-8 flex flex-wrap gap-4 items-center card p-4 rounded-lg">
+                    <span class="font-semibold">Filter by:</span>
+                    <select id="rarity-filter" class="rounded-lg border-gray-300 dark:border-gray-600 shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"><option value="all">All Rarities</option></select>
+                    <select id="type-filter" class="rounded-lg border-gray-300 dark:border-gray-600 shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"><option value="all">All Types</option></select>
                 </div>
-                <div id="results-container" class="min-h-[200px] flex items-center justify-center"></div>
+                <div id="results-container" class="min-h-[200px]"></div>
             </section>
         </main>
     </div>
@@ -102,23 +131,50 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const analyzeBtn = document.getElementById('analyze-btn');
-            const resultsSection = document.getElementById('results-section');
-            const summaryContainer = document.getElementById('summary-container');
-            const resultsContainer = document.getElementById('results-container');
             const bulkCardInput = document.getElementById('bulk-card-input');
             const cardModal = document.getElementById('card-modal');
+            const themeToggle = document.getElementById('theme-toggle');
+            const lightIcon = document.getElementById('theme-icon-light');
+            const darkIcon = document.getElementById('theme-icon-dark');
+            const loadLastBtn = document.getElementById('load-last-btn');
+            
             let priceChart = null;
+            let doughnutChart = null;
             let currentAnalysisData = {};
+            let scryfallCache = new Map();
 
             const CURRENCY_CONVERSIONS_TO_USD = { EUR: 1.08, GBP: 1.27, USD: 1 };
             const CURRENCY_CONVERSIONS_FROM_USD = { USD: 1, EUR: 0.92, GBP: 0.79 };
             const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£' };
 
-            // --- DECODE AND POPULATE FROM URL ---
+            // --- THEME ---
+            const updateThemeIcon = () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    lightIcon.classList.add('hidden'); darkIcon.classList.remove('hidden');
+                } else {
+                    lightIcon.classList.remove('hidden'); darkIcon.classList.add('hidden');
+                }
+            };
+            themeToggle.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+                updateThemeIcon();
+                if (currentAnalysisData.allCards) applyFiltersAndRender();
+            });
+            updateThemeIcon();
+
+            // --- LOCAL STORAGE & URL ---
+            if(localStorage.getItem('lastMtgList')) {
+                loadLastBtn.classList.remove('hidden');
+            }
+            loadLastBtn.addEventListener('click', () => {
+                bulkCardInput.value = localStorage.getItem('lastMtgList');
+            });
+
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('data')) {
                 try {
-                    const decodedData = decodeURIComponent(urlParams.get('data'));
+                    const decodedData = atob(decodeURIComponent(urlParams.get('data')));
                     bulkCardInput.value = decodedData;
                     analyzeBtn.click();
                 } catch (e) { console.error("Failed to decode data from URL", e); }
@@ -126,33 +182,42 @@
 
             document.getElementById('card-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                localStorage.setItem('lastMtgList', bulkCardInput.value);
+                loadLastBtn.classList.remove('hidden');
                 const cardInputs = parseIntelligent(bulkCardInput.value);
                 if (cardInputs.length === 0) {
                     alert('Could not parse any valid cards. Please check your list format.');
                     return;
                 }
                 setLoading(true);
-                resultsSection.classList.remove('hidden');
-                resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById('results-section').classList.remove('hidden');
+                document.getElementById('results-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 try {
                     const analysis = await analyzeMarketPrices(cardInputs);
                     renderResults(analysis);
                 } catch (error) {
-                    resultsContainer.innerHTML = `<p class="text-red-600 font-semibold">${error.message}</p>`;
+                    document.getElementById('results-container').innerHTML = `<p class="text-red-600 font-semibold">${error.message}</p>`;
                 } finally { setLoading(false); }
             });
-
+            
             function parseIntelligent(text) {
-                const blocks = text.split(/\n\s*\n/g).filter(b => b.trim() !== '');
+                const blocks = text.split(/\n\s*\n/g).filter(b => b.trim());
                 const cardInputs = [];
                 let detectedCurrency = null;
 
                 for (const block of blocks) {
-                    const lines = block.split('\n').map(l => l.trim()).filter(l => l);
+                    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
                     if (lines.length === 0) continue;
-
+                    
                     let name = lines[0];
                     let priceInfo = null;
+                    let setCode = null;
+
+                    const setMatch = name.match(/\s*[({\[]([A-Z0-9]{3,5})[)}\]]\s*$/i);
+                    if(setMatch) {
+                        setCode = setMatch[1];
+                        name = name.replace(setMatch[0], '').trim();
+                    }
 
                     for (let i = 1; i < lines.length; i++) {
                         const match = lines[i].match(/(\d+[,.]\d+)\s*([$€£])?/);
@@ -163,6 +228,7 @@
                     }
 
                     if (!priceInfo) continue;
+                    
                     let inputCurrency = 'USD';
                     if (priceInfo.symbol === '€') inputCurrency = 'EUR';
                     else if (priceInfo.symbol === '£') inputCurrency = 'GBP';
@@ -175,64 +241,61 @@
                     const isFoil = name.toLowerCase().includes('(foil)');
                     if (isFoil) name = name.replace(/\(foil\)/ig, '').trim();
 
-                    cardInputs.push({
-                        name,
-                        userPriceInUSD: priceInfo.price * (CURRENCY_CONVERSIONS_TO_USD[inputCurrency] || 1),
-                        isFoil
-                    });
+                    cardInputs.push({ name, userPriceInUSD: priceInfo.price * (CURRENCY_CONVERSIONS_TO_USD[inputCurrency] || 1), isFoil, set: setCode });
                 }
                 return cardInputs;
             }
 
             async function analyzeMarketPrices(cards) {
-                let identifiers = cards.map(c => ({ name: c.name }));
-                const chunks = [];
-                for (let i = 0; i < identifiers.length; i += 75) {
-                    chunks.push(identifiers.slice(i, i + 75));
-                }
-
-                let scryfallData = [];
-                for (const chunk of chunks) {
-                    const response = await fetch('https://api.scryfall.com/cards/collection', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ identifiers: chunk }),
-                    });
-                    if (!response.ok) throw new Error('Failed to fetch data from Scryfall API.');
-                    const result = await response.json();
-                    scryfallData = scryfallData.concat(result.data);
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                let identifiers = cards.map(c => ({ name: c.name, ...(c.set && { set: c.set }) }));
+                const uncachedIdentifiers = identifiers.filter(id => !scryfallCache.has(`${id.name}|${id.set || ''}`));
+                
+                if (uncachedIdentifiers.length > 0) {
+                    const chunks = [];
+                    for (let i = 0; i < uncachedIdentifiers.length; i += 75) {
+                        chunks.push(uncachedIdentifiers.slice(i, i + 75));
+                    }
+                    for (const chunk of chunks) {
+                        const response = await fetch('https://api.scryfall.com/cards/collection', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ identifiers: chunk }),
+                        });
+                        if (!response.ok) throw new Error('Failed to fetch data from Scryfall API.');
+                        const result = await response.json();
+                        result.data.forEach(cardData => {
+                            const key = `${cardData.name}|${cardData.set}`;
+                            scryfallCache.set(key, cardData);
+                             if(!scryfallCache.has(`${cardData.name}|`)) {
+                                scryfallCache.set(`${cardData.name}|`, cardData);
+                            }
+                        });
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
                 }
                 
-                let totalUserValueUSD = 0;
-                let totalMarketValueUSD = 0;
-                let allCards = [];
-
-                cards.forEach(originalCard => {
-                    const cardData = scryfallData.find(sc => sc.name.toLowerCase() === originalCard.name.toLowerCase());
+                let totalUserValueUSD = 0, totalMarketValueUSD = 0;
+                const allCards = cards.map(originalCard => {
+                    const key = `${originalCard.name}|${originalCard.set || ''}`;
+                    const fallbackKey = `${originalCard.name}|`;
+                    const cardData = scryfallCache.get(key) || scryfallCache.get(fallbackKey);
                     totalUserValueUSD += originalCard.userPriceInUSD;
 
                     if (cardData) {
                         const priceKey = originalCard.isFoil ? 'usd_foil' : 'usd';
                         const marketPrice = parseFloat(cardData.prices[priceKey]) || parseFloat(cardData.prices.usd) || 0;
                         totalMarketValueUSD += marketPrice;
-                        allCards.push({
-                            ...originalCard, marketPrice, imageUrl: cardData.image_uris?.normal,
-                            setData: cardData, trend: cardData.prices.usd_trend
-                        });
-                    } else {
-                        allCards.push({...originalCard, marketPrice: 0, error: `Could not find '${originalCard.name}'.`});
+                        return { ...originalCard, marketPrice, imageUrl: cardData.image_uris?.normal, setData: cardData };
                     }
+                    return {...originalCard, marketPrice: 0, error: `Could not find '${originalCard.name}'.`};
                 });
                 
                 return { totalUserValueUSD, totalMarketValueUSD, allCards };
             }
-            
+
             function sortResultList(listType, sortBy) {
                 const listEl = document.getElementById(`${listType}-list`);
                 if (!listEl) return;
                 const items = Array.from(listEl.querySelectorAll('li'));
-
                 items.sort((a, b) => {
                     const aMarket = parseFloat(a.dataset.market);
                     const bMarket = parseFloat(b.dataset.market);
@@ -249,8 +312,7 @@
                 listEl.innerHTML = '';
                 items.forEach(item => listEl.appendChild(item));
             }
-
-
+            
             function renderResults(data) {
                 currentAnalysisData = data;
                 applyFiltersAndRender();
@@ -260,18 +322,15 @@
                 const rarityFilter = document.getElementById('rarity-filter').value;
                 const typeFilter = document.getElementById('type-filter').value;
 
-                let filteredCards = currentAnalysisData.allCards;
-
-                if (rarityFilter !== 'all') {
-                    filteredCards = filteredCards.filter(c => c.setData && c.setData.rarity === rarityFilter);
-                }
-                if (typeFilter !== 'all') {
-                    filteredCards = filteredCards.filter(c => c.setData && c.setData.type_line.toLowerCase().includes(typeFilter));
-                }
+                let filteredCards = currentAnalysisData.allCards.filter(c => {
+                    if (rarityFilter !== 'all' && c.setData?.rarity !== rarityFilter) return false;
+                    if (typeFilter !== 'all' && !c.setData?.type_line.toLowerCase().includes(typeFilter)) return false;
+                    return true;
+                });
                 
                 populateFilterOptions(currentAnalysisData.allCards);
                 document.getElementById('filter-controls').classList.remove('hidden');
-
+                
                 const displayCurrency = document.getElementById('currency-select').value;
                 const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
                 const symbol = CURRENCY_SYMBOLS[displayCurrency];
@@ -280,44 +339,51 @@
                 const totalMarketValue = currentAnalysisData.totalMarketValueUSD * conversionRate;
                 const netValue = totalMarketValue - totalUserValue;
 
-                summaryContainer.innerHTML = `
-                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center"><p class="text-sm text-gray-600">Your Total Cost</p><p class="text-3xl font-bold text-gray-800 mt-2">${symbol}${totalUserValue.toFixed(2)}</p></div>
-                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center"><p class="text-sm text-gray-600">Total Market Value</p><p class="text-3xl font-bold text-gray-800 mt-2">${symbol}${totalMarketValue.toFixed(2)}</p></div>
-                    <div class="p-6 rounded-lg shadow-md flex flex-col items-center justify-center ${netValue >= 0 ? 'bg-green-100' : 'bg-red-100'}"><p class="text-sm font-semibold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">Net Value</p><p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'} mt-2">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p></div>
+                const summarySection = document.getElementById('summary-section');
+                summarySection.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 text-center">
+                        <div class="card p-6 rounded-lg flex flex-col items-center justify-center"><p class="text-sm text-subtle-text-color">Your Total Cost</p><p class="text-3xl font-bold mt-2">${symbol}${totalUserValue.toFixed(2)}</p></div>
+                        <div class="card p-6 rounded-lg flex flex-col items-center justify-center"><p class="text-sm text-subtle-text-color">Total Market Value</p><p class="text-3xl font-bold mt-2">${symbol}${totalMarketValue.toFixed(2)}</p></div>
+                        <div class="p-6 rounded-lg flex flex-col items-center justify-center ${netValue >= 0 ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}"><p class="text-sm font-semibold ${netValue >= 0 ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}">Net Value</p><p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'} mt-2">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p></div>
+                        <div class="card p-6 rounded-lg flex flex-col items-center justify-center"><div class="doughnut-container"><canvas id="summary-doughnut-chart"></canvas></div></div>
+                    </div>
                 `;
                 
-                let listsHtml = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white p-6 rounded-lg shadow-lg">';
-                listsHtml += createListHtml('Good Deals', filteredCards.filter(c => !c.error && (c.marketPrice > c.userPriceInUSD)), 'green', conversionRate, symbol);
-                listsHtml += createListHtml('Bad Deals', filteredCards.filter(c => !c.error && (c.marketPrice < c.userPriceInUSD)), 'red', conversionRate, symbol);
+                const goodDeals = filteredCards.filter(c => !c.error && (c.marketPrice > c.userPriceInUSD));
+                const badDeals = filteredCards.filter(c => !c.error && (c.marketPrice < c.userPriceInUSD));
+
+                let listsHtml = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 card p-6 rounded-lg">';
+                listsHtml += createListHtml('Good Deals', goodDeals, 'green', conversionRate, symbol);
+                listsHtml += createListHtml('Bad Deals', badDeals, 'red', conversionRate, symbol);
                 
                 if (filteredCards.some(c => c.error)) {
-                    listsHtml += `<div class="lg:col-span-2 mt-4"><h3 class="text-xl font-semibold text-gray-700 mb-3">Unfound Cards</h3><ul class="space-y-2">${filteredCards.filter(c=>c.error).map(c=>`<li class="p-3 rounded-md highlight-gray"><strong>${c.name}</strong>: ${c.error}</li>`).join('')}</ul></div>`;
+                    listsHtml += `<div class="lg:col-span-2 mt-4"><h3 class="text-xl font-semibold mb-3">Unfound Cards</h3><ul class="space-y-2">${filteredCards.filter(c=>c.error).map(c=>`<li class="p-3 rounded-md highlight-gray"><strong>${c.name}</strong>: ${c.error}</li>`).join('')}</ul></div>`;
                 }
-
                 listsHtml += '</div>';
                 
-                resultsContainer.innerHTML = listsHtml + `<div class="mt-8 bg-white p-6 rounded-lg shadow-lg"><h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Your Price vs. Market Price</h3><div class="chart-container"><canvas id="priceChart"></canvas></div></div>`;
-                renderChart({ allCards: filteredCards });
+                document.getElementById('results-container').innerHTML = listsHtml + `<div class="mt-8 card p-6 rounded-lg"><h3 class="text-xl font-semibold text-center mb-4">Your Price vs. Market Price</h3><div class="chart-container"><canvas id="priceChart"></canvas></div></div>`;
+                renderDoughnutChart(goodDeals.length, badDeals.length, filteredCards.length - goodDeals.length - badDeals.length);
+                renderBarChart({ allCards: filteredCards });
                 addResultEventListeners();
             }
 
             function createListHtml(title, cards, type, conversionRate, symbol) {
-                let html = `<div><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-semibold text-gray-700">${title}</h3><select class="sort-select text-sm rounded-md border-gray-300 shadow-sm" data-list-type="${type}"><option value="diff_desc">Best Deal</option><option value="name_asc">Name (A-Z)</option></select></div><ul class="space-y-2 result-list" id="${type}-list">`;
-                if (cards.length === 0) {
-                    return html + '<p class="text-gray-500 p-4 bg-gray-100 rounded-md">No cards match filters.</p></div>';
-                }
+                const dealText = title === 'Good Deals' ? 'Best Deal' : 'Worst Deal';
+                let html = `<div><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-semibold">${title}</h3><select class="sort-select text-sm rounded-md border-border-color shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" data-list-type="${type}"><option value="diff_desc">${dealText}</option><option value="name_asc">Name (A-Z)</option></select></div><ul class="space-y-2 result-list" id="${type}-list">`;
+                if (cards.length === 0) return html + '<p class="text-subtle-text-color p-4 bg-gray-100 dark:bg-gray-800 rounded-md">No cards match filters.</p></div>';
+
+                cards.sort((a,b) => {
+                    const aDiff = a.marketPrice - a.userPriceInUSD;
+                    const bDiff = b.marketPrice - b.userPriceInUSD;
+                    return type === 'green' ? bDiff - aDiff : aDiff - bDiff;
+                });
+
                 cards.forEach(card => {
                     const marketPriceConverted = card.marketPrice * conversionRate;
                     const userPriceConverted = card.userPriceInUSD * conversionRate;
                     const diff = marketPriceConverted - userPriceConverted;
-                    const trendIcon = card.trend === 'up' ? '▲' : card.trend === 'down' ? '▼' : '●';
-                    html += `<li class="result-item p-3 rounded-lg highlight-${type} flex justify-between items-center cursor-pointer transition hover:shadow-lg hover:scale-105" 
-                        data-card-index="${currentAnalysisData.allCards.indexOf(card)}"
-                        data-name="${card.name}"
-                        data-price="${userPriceConverted}"
-                        data-market="${marketPriceConverted}">
-                        <div><strong>${card.name}${card.isFoil ? ' (Foil)' : ''}</strong></div>
-                        <div class="flex items-center gap-2"><span class="trend-${card.trend}" title="Price Trend: ${card.trend}">${trendIcon}</span> <span class="font-semibold">${symbol}${Math.abs(diff).toFixed(2)}</span></div></li>`;
+                    const trendIcon = card.setData?.prices?.usd_trend === 'up' ? '▲' : card.setData?.prices?.usd_trend === 'down' ? '▼' : '●';
+                    html += `<li class="result-item p-3 rounded-lg highlight-${type} flex justify-between items-center cursor-pointer transition hover:shadow-lg hover:scale-105" data-card-index="${currentAnalysisData.allCards.indexOf(card)}" data-name="${card.name}" data-price="${userPriceConverted}" data-market="${marketPriceConverted}"><div><strong>${card.name}${card.isFoil ? ' (Foil)' : ''}</strong></div><div class="flex items-center gap-2"><span class="trend-${card.setData?.prices?.usd_trend}" title="Price Trend: ${card.setData?.prices?.usd_trend}">${trendIcon}</span> <span class="font-semibold">${symbol}${Math.abs(diff).toFixed(2)}</span></div></li>`;
                 });
                 return html + '</ul></div>';
             }
@@ -333,33 +399,48 @@
 
             function showModal(cardIndex) {
                 const card = currentAnalysisData.allCards[cardIndex];
-                if (!card) return;
+                if (!card || !card.setData) return;
 
                 const displayCurrency = document.getElementById('currency-select').value;
                 const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
                 const symbol = CURRENCY_SYMBOLS[displayCurrency];
                 
-                const modalBody = document.getElementById('modal-body');
-                modalBody.innerHTML = `
+                const type = encodeURIComponent(card.setData.type_line.split('—')[0].trim());
+                const cmc = card.setData.cmc;
+                const similarLink = `https://scryfall.com/search?q=t%3A${type}+cmc%3D${cmc}+-name%3A%2F%5E${encodeURIComponent(card.name)}%24%2F`;
+                
+                document.getElementById('modal-body').innerHTML = `
                     <div><img src="${card.imageUrl}" alt="${card.name}" class="rounded-lg shadow-lg w-full"></div>
-                    <div class="prose max-w-none">
+                    <div class="prose dark:prose-invert max-w-none">
                         <h2>${card.name}</h2>
-                        <p><strong>Set:</strong> ${card.setData.set_name}</p>
+                        <p><strong>Set:</strong> ${card.setData.set_name} (${card.setData.set.toUpperCase()})</p>
                         <p><strong>Rarity:</strong> <span class="capitalize">${card.setData.rarity}</span></p>
                         <p><strong>Your Price:</strong> ${symbol}${(card.userPriceInUSD * conversionRate).toFixed(2)}</p>
                         <p><strong>Market Price:</strong> ${symbol}${(card.marketPrice * conversionRate).toFixed(2)}</p>
+                        <a href="${similarLink}" target="_blank" class="text-blue-500 no-underline hover:underline">Find Similar Cards →</a>
                         <hr>
                         <p>${card.setData.oracle_text.replace(/\n/g, '<br>')}</p>
                     </div>`;
                 cardModal.classList.add('active');
             }
 
-            cardModal.addEventListener('click', (e) => {
-                if (e.target === cardModal) cardModal.classList.remove('active');
-            });
+            cardModal.addEventListener('click', (e) => { if (e.target === cardModal) cardModal.classList.remove('active'); });
+            
+            function setLoading(isLoading) {
+                const analyzeBtn = document.getElementById('analyze-btn');
+                if (isLoading) {
+                    analyzeBtn.disabled = true;
+                    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+                    document.getElementById('results-container').innerHTML = '<div class="flex items-center justify-center p-12"><div class="spinner border-gray-500 border-l-blue-500"></div></div>';
+                    document.getElementById('summary-section').innerHTML = '';
+                } else {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = 'Analyze';
+                }
+            }
 
             function populateFilterOptions(cards) {
-                const rarities = [...new Set(cards.map(c => c.setData?.rarity).filter(Boolean))];
+                 const rarities = [...new Set(cards.map(c => c.setData?.rarity).filter(Boolean))];
                 const types = [...new Set(cards.flatMap(c => c.setData?.type_line.split('//')[0].trim().split('—')[0].trim().split(' ')).filter(Boolean))];
 
                 const rarityFilter = document.getElementById('rarity-filter');
@@ -372,55 +453,21 @@
                 typeFilter.innerHTML = '<option value="all">All Types</option>';
                 types.forEach(t => typeFilter.innerHTML += `<option value="${t.toLowerCase()}" ${t.toLowerCase()===currentType ? 'selected':''}>${t}</option>`);
             }
-
-            document.getElementById('rarity-filter').addEventListener('change', applyFiltersAndRender);
+             document.getElementById('rarity-filter').addEventListener('change', applyFiltersAndRender);
             document.getElementById('type-filter').addEventListener('change', applyFiltersAndRender);
             document.getElementById('currency-select').addEventListener('change', () => {
                 if (currentAnalysisData.allCards) applyFiltersAndRender();
             });
             document.getElementById('share-btn').addEventListener('click', () => {
-                const dataToShare = encodeURIComponent(bulkCardInput.value);
-                const url = `${window.location.origin}${window.location.pathname}?data=${dataToShare}`;
-                navigator.clipboard.writeText(url).then(() => alert('Shareable link copied to clipboard!'), () => alert('Failed to copy link.'));
-            });
-
-            function setLoading(isLoading) {
-                if (isLoading) {
-                    analyzeBtn.disabled = true;
-                    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
-                    resultsContainer.innerHTML = '<div class="spinner mx-auto border-gray-500 border-l-blue-500"></div>';
-                    summaryContainer.innerHTML = '';
-                } else {
-                    analyzeBtn.disabled = false;
-                    analyzeBtn.innerHTML = 'Analyze';
+                try {
+                    const dataToShare = btoa(encodeURIComponent(bulkCardInput.value));
+                    const url = `${window.location.origin}${window.location.pathname}?data=${dataToShare}`;
+                    navigator.clipboard.writeText(url).then(() => alert('Shareable link copied to clipboard!'), () => alert('Failed to copy link.'));
+                } catch(e) {
+                    alert("Could not generate share link for this list.");
                 }
-            }
-
-            function renderChart(data) {
-                const chartEl = document.getElementById('priceChart');
-                if (!chartEl) return;
-                const ctx = chartEl.getContext('2d');
-                if (priceChart) priceChart.destroy();
-                
-                const displayCurrency = document.getElementById('currency-select').value;
-                const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
-                const symbol = CURRENCY_SYMBOLS[displayCurrency];
-                const filteredCards = data.allCards.filter(c => !c.error);
-
-                priceChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: filteredCards.map(c => c.name.length > 20 ? c.name.substring(0,17)+'...' : c.name),
-                        datasets: [
-                            { label: `Your Price (${symbol})`, data: filteredCards.map(c => c.userPriceInUSD * conversionRate), backgroundColor: 'rgba(59, 130, 246, 0.7)' },
-                            { label: `Market Price (${symbol})`, data: filteredCards.map(c => c.marketPrice * conversionRate), backgroundColor: 'rgba(16, 185, 129, 0.7)' }
-                        ]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: `Price (${symbol})` } }, x: { grid: { display: false } } } }
-                });
-            }
-
-             document.getElementById('export-csv-btn').addEventListener('click', () => {
+            });
+            document.getElementById('export-csv-btn').addEventListener('click', () => {
                 if(!currentAnalysisData.allCards) return;
                 const displayCurrency = document.getElementById('currency-select').value;
                 const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
@@ -441,6 +488,68 @@
                 link.click();
                 document.body.removeChild(link);
             });
+            
+             function renderDoughnutChart(good, bad, unfound) {
+                const chartEl = document.getElementById('summary-doughnut-chart');
+                if (!chartEl) return;
+                const ctx = chartEl.getContext('2d');
+                if (doughnutChart) doughnutChart.destroy();
+                
+                const isDark = document.documentElement.classList.contains('dark');
+                const textColor = isDark ? '#f9fafb' : '#1f2937';
+
+                doughnutChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Good Deals', 'Bad Deals', 'Unfound'],
+                        datasets: [{
+                            data: [good, bad, unfound],
+                            backgroundColor: ['#4caf50', '#f44336', '#9e9e9e'],
+                            borderColor: 'var(--card-bg-color)',
+                            borderWidth: 4,
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 20 } } }
+                    }
+                });
+            }
+
+            function renderBarChart(data) {
+                const chartEl = document.getElementById('priceChart');
+                if (!chartEl) return;
+                const ctx = chartEl.getContext('2d');
+                if (priceChart) priceChart.destroy();
+                
+                const isDark = document.documentElement.classList.contains('dark');
+                const textColor = isDark ? '#f9fafb' : '#1f2937';
+                const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+                const displayCurrency = document.getElementById('currency-select').value;
+                const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
+                const symbol = CURRENCY_SYMBOLS[displayCurrency];
+                const filteredCards = data.allCards.filter(c => !c.error);
+
+                priceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: filteredCards.map(c => c.name.length > 20 ? c.name.substring(0,17)+'...' : c.name),
+                        datasets: [
+                            { label: `Your Price (${symbol})`, data: filteredCards.map(c => c.userPriceInUSD * conversionRate), backgroundColor: 'rgba(59, 130, 246, 0.7)' },
+                            { label: `Market Price (${symbol})`, data: filteredCards.map(c => c.marketPrice * conversionRate), backgroundColor: 'rgba(16, 185, 129, 0.7)' }
+                        ]
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, 
+                        plugins: { legend: { position: 'top', labels: { color: textColor } } }, 
+                        scales: { 
+                            y: { beginAtZero: true, title: { display: true, text: `Price (${symbol})`, color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } }, 
+                            x: { grid: { display: false }, ticks: { color: textColor } } 
+                        } 
+                    }
+                });
+            }
         });
     </script>
 </body>
