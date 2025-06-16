@@ -21,6 +21,7 @@
         :root {
             --bg-color: #f0f2f5;
             --card-bg-color: #ffffff;
+            --input-bg-color: #f9fafb;
             --text-color: #1f2937;
             --subtle-text-color: #6b7280;
             --border-color: #e5e7eb;
@@ -29,6 +30,7 @@
         .dark {
             --bg-color: #111827;
             --card-bg-color: #1f2937;
+            --input-bg-color: #374151;
             --text-color: #f9fafb;
             --subtle-text-color: #9ca3af;
             --border-color: #374151;
@@ -36,6 +38,11 @@
         }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); transition: background-color 0.3s, color 0.3s; }
         .card { background-color: var(--card-bg-color); border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px var(--shadow-color); }
+        .form-element {
+             background-color: var(--input-bg-color);
+             border: 1px solid var(--border-color);
+             color: var(--text-color);
+        }
         .chart-container, .doughnut-container { position: relative; width: 100%; margin-left: auto; margin-right: auto; }
         .chart-container { max-width: 900px; height: 400px; max-height: 50vh; }
         .doughnut-container { max-width: 300px; height: 300px; }
@@ -68,7 +75,7 @@
 </head>
 <body class="antialiased">
 
-    <img id="card-image-preview" src="" alt="Card Image Preview" class="w-48 rounded-lg shadow-2xl">
+    <img id="card-image-preview" src="" alt="Card Image Preview" class="w-48 rounded-lg shadow-2xl" hidden>
 
     <div id="card-modal" class="modal-overlay">
         <div class="modal-content card">
@@ -95,12 +102,12 @@
                     <p>For specific sets, use format: <code class="text-sm">Card Name (SET)</code> or <code class="text-sm">Card Name {SET}</code>.</p>
                 </div>
                 <form id="card-form">
-                     <textarea id="bulk-card-input" class="w-full h-64 p-3 border rounded-md shadow-sm font-mono text-sm bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"></textarea>
+                     <textarea id="bulk-card-input" class="w-full h-64 p-3 rounded-md shadow-sm font-mono text-sm form-element"></textarea>
                     <div class="flex flex-wrap items-center gap-4 mt-4">
                         <button type="submit" id="analyze-btn" class="flex-grow md:flex-grow-0 w-auto flex items-center gap-2 justify-center text-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition">Analyze</button>
                         <div class="relative">
                             <label for="currency-select" class="text-sm font-medium text-subtle-text-color mr-2">Display:</label>
-                            <select id="currency-select" class="rounded-lg border-gray-300 dark:border-gray-600 shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <select id="currency-select" class="rounded-lg shadow-sm form-element">
                                 <option value="USD">USD ($)</option> <option value="EUR">EUR (€)</option> <option value="GBP">GBP (£)</option>
                             </select>
                         </div>
@@ -117,13 +124,13 @@
                         <button id="export-csv-btn" class="px-4 py-2 bg-gray-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-gray-700 transition">Export CSV</button>
                     </div>
                 </div>
-                <div id="summary-section"></div>
-                <div id="filter-controls" class="hidden my-8 flex flex-wrap gap-4 items-center card p-4 rounded-lg">
+                <div id="summary-section" class="mb-8"></div>
+                <div id="filter-controls" class="hidden mb-8 flex flex-wrap gap-4 items-center card p-4 rounded-lg">
                     <span class="font-semibold">Filter by:</span>
-                    <select id="rarity-filter" class="rounded-lg border-gray-300 dark:border-gray-600 shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"><option value="all">All Rarities</option></select>
-                    <select id="type-filter" class="rounded-lg border-gray-300 dark:border-gray-600 shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"><option value="all">All Types</option></select>
+                    <select id="rarity-filter" class="rounded-lg shadow-sm form-element"><option value="all">All Rarities</option></select>
+                    <select id="type-filter" class="rounded-lg shadow-sm form-element"><option value="all">All Types</option></select>
                 </div>
-                <div id="results-container" class="min-h-[200px]"></div>
+                <div id="results-container" class="space-y-8"></div>
             </section>
         </main>
     </div>
@@ -147,7 +154,6 @@
             const CURRENCY_CONVERSIONS_FROM_USD = { USD: 1, EUR: 0.92, GBP: 0.79 };
             const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£' };
 
-            // --- THEME ---
             const updateThemeIcon = () => {
                 if (document.documentElement.classList.contains('dark')) {
                     lightIcon.classList.add('hidden'); darkIcon.classList.remove('hidden');
@@ -163,7 +169,6 @@
             });
             updateThemeIcon();
 
-            // --- LOCAL STORAGE & URL ---
             if(localStorage.getItem('lastMtgList')) {
                 loadLastBtn.classList.remove('hidden');
             }
@@ -191,7 +196,7 @@
                 }
                 setLoading(true);
                 document.getElementById('results-section').classList.remove('hidden');
-                document.getElementById('results-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById('summary-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 try {
                     const analysis = await analyzeMarketPrices(cardInputs);
                     renderResults(analysis);
@@ -215,7 +220,7 @@
 
                     const setMatch = name.match(/\s*[({\[]([A-Z0-9]{3,5})[)}\]]\s*$/i);
                     if(setMatch) {
-                        setCode = setMatch[1];
+                        setCode = setMatch[1].toLowerCase();
                         name = name.replace(setMatch[0], '').trim();
                     }
 
@@ -341,7 +346,7 @@
 
                 const summarySection = document.getElementById('summary-section');
                 summarySection.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 text-center">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div class="card p-6 rounded-lg flex flex-col items-center justify-center"><p class="text-sm text-subtle-text-color">Your Total Cost</p><p class="text-3xl font-bold mt-2">${symbol}${totalUserValue.toFixed(2)}</p></div>
                         <div class="card p-6 rounded-lg flex flex-col items-center justify-center"><p class="text-sm text-subtle-text-color">Total Market Value</p><p class="text-3xl font-bold mt-2">${symbol}${totalMarketValue.toFixed(2)}</p></div>
                         <div class="p-6 rounded-lg flex flex-col items-center justify-center ${netValue >= 0 ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}"><p class="text-sm font-semibold ${netValue >= 0 ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}">Net Value</p><p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'} mt-2">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p></div>
@@ -369,8 +374,8 @@
 
             function createListHtml(title, cards, type, conversionRate, symbol) {
                 const dealText = title === 'Good Deals' ? 'Best Deal' : 'Worst Deal';
-                let html = `<div><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-semibold">${title}</h3><select class="sort-select text-sm rounded-md border-border-color shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" data-list-type="${type}"><option value="diff_desc">${dealText}</option><option value="name_asc">Name (A-Z)</option></select></div><ul class="space-y-2 result-list" id="${type}-list">`;
-                if (cards.length === 0) return html + '<p class="text-subtle-text-color p-4 bg-gray-100 dark:bg-gray-800 rounded-md">No cards match filters.</p></div>';
+                let html = `<div><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-semibold">${title}</h3><select class="sort-select text-sm rounded-md form-element" data-list-type="${type}"><option value="diff_desc">${dealText}</option><option value="name_asc">Name (A-Z)</option></select></div><ul class="space-y-2 result-list" id="${type}-list">`;
+                if (cards.length === 0) return html + `<p class="text-subtle-text-color p-4 bg-gray-100 dark:bg-gray-800 rounded-md">No cards match filters.</p></div>`;
 
                 cards.sort((a,b) => {
                     const aDiff = a.marketPrice - a.userPriceInUSD;
@@ -405,9 +410,9 @@
                 const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
                 const symbol = CURRENCY_SYMBOLS[displayCurrency];
                 
-                const type = encodeURIComponent(card.setData.type_line.split('—')[0].trim());
+                const mainType = card.setData.type_line.split('—')[0].trim().split(' ').pop().toLowerCase();
                 const cmc = card.setData.cmc;
-                const similarLink = `https://scryfall.com/search?q=t%3A${type}+cmc%3D${cmc}+-name%3A%2F%5E${encodeURIComponent(card.name)}%24%2F`;
+                const similarLink = `https://scryfall.com/search?q=t%3A${mainType}+cmc%3D${cmc}+-name%3A%2F%5E${encodeURIComponent(card.name)}%24%2F`;
                 
                 document.getElementById('modal-body').innerHTML = `
                     <div><img src="${card.imageUrl}" alt="${card.name}" class="rounded-lg shadow-lg w-full"></div>
