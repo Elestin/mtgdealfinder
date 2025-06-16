@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive MTG Price Analyzer</title>
+    <title>Interactive MTG Price Analyzer - Advanced</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,69 +14,85 @@
     <!-- Visualization & Content Choices: Retains the core feature set for analysis: grouped bar chart, floating card image on hover, net profit/loss summary, sorting controls, and CSV export. The focus is on providing a rich analysis experience within a single session. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         .chart-container { position: relative; width: 100%; max-width: 900px; margin-left: auto; margin-right: auto; height: 400px; max-height: 50vh; }
         @media (min-width: 768px) { .chart-container { height: 500px; } }
-        .highlight-green { background-color: #dcfce7; color: #166534; }
-        .highlight-red { background-color: #fee2e2; color: #991b1b; }
+        .highlight-green { background-color: #e6f4ea; color: #1e4620; border-left: 4px solid #4caf50; }
+        .highlight-red { background-color: #fdecea; color: #611a15; border-left: 4px solid #f44336; }
         .highlight-gray { background-color: #f3f4f6; color: #4b5563; }
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #fff; animation: spin 1s ease infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #card-image-preview {
-            position: fixed;
-            z-index: 100;
-            pointer-events: none;
-            display: none;
-            transition: opacity 0.1s;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            position: fixed; z-index: 1000; pointer-events: none; display: none;
+            transition: opacity 0.1s; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); display: flex;
+            align-items: center; justify-content: center; z-index: 500;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: white; padding: 2rem; border-radius: 1rem;
+            max-width: 90vw; max-height: 90vh; overflow-y: auto;
+            width: 800px; transform: scale(0.95); transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .trend-up { color: #4caf50; }
+        .trend-down { color: #f44336; }
+        .trend-stable { color: #9e9e9e; }
     </style>
 </head>
 <body class="bg-[#f8f9fa]">
 
-    <!-- Floating Image Preview -->
     <img id="card-image-preview" src="" alt="Card Image Preview" class="w-48">
+
+    <div id="card-modal" class="modal-overlay">
+        <div class="modal-content">
+             <div id="modal-body" class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start"></div>
+        </div>
+    </div>
 
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         <header class="text-center mb-10">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-800">MTG Market Price Analyzer</h1>
-            <p class="mt-2 text-md text-gray-600">Your Personal Collection Valuation Tool</p>
+            <p class="mt-2 text-md text-gray-600">Your Advanced Collection Valuation Tool</p>
         </header>
 
         <main class="space-y-12">
-            <!-- Analyzer Tool Section -->
-            <section id="analyzer-tool" class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
-                <div class="prose max-w-none mb-6">
+            <section class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
+                 <div class="prose max-w-none mb-6">
                     <h2 class="text-2xl font-semibold text-gray-700">Analyze Your Collection</h2>
                     <p>Paste your list below. The tool will automatically detect card names, prices, currencies, and foil versions.</p>
                 </div>
-
                 <form id="card-form">
-                     <div class="form-group flex flex-col">
-                        <textarea id="bulk-card-input" class="w-full h-64 p-3 border border-gray-300 rounded-md shadow-sm font-mono text-sm"></textarea>
-                    </div>
-                    <div class="flex items-center gap-4 mt-4">
-                        <button type="submit" id="analyze-btn" class="w-auto flex items-center gap-2 justify-center text-center px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600">
-                            Analyze Prices
-                        </button>
+                     <textarea id="bulk-card-input" class="w-full h-64 p-3 border border-gray-300 rounded-md shadow-sm font-mono text-sm"></textarea>
+                    <div class="flex flex-wrap items-center gap-4 mt-4">
+                        <button type="submit" id="analyze-btn" class="flex-grow md:flex-grow-0 w-auto flex items-center gap-2 justify-center text-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition">Analyze</button>
                         <div class="relative">
-                            <label for="currency-select" class="text-sm font-medium text-gray-600 mr-2">Display Currency:</label>
+                            <label for="currency-select" class="text-sm font-medium text-gray-600 mr-2">Display:</label>
                             <select id="currency-select" class="rounded-lg border-gray-300 shadow-sm">
-                                <option value="USD">USD ($)</option>
-                                <option value="EUR">EUR (€)</option>
-                                <option value="GBP">GBP (£)</option>
+                                <option value="USD">USD ($)</option> <option value="EUR">EUR (€)</option> <option value="GBP">GBP (£)</option>
                             </select>
                         </div>
                     </div>
                 </form>
             </section>
 
-            <!-- Results Section -->
-            <section id="results-section" class="hidden bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
-                <div class="flex justify-between items-center mb-6">
+            <section id="results-section" class="hidden">
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                     <h2 class="text-2xl font-semibold text-gray-700">Market Analysis Results</h2>
-                    <button id="export-csv-btn" class="px-4 py-2 bg-gray-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-gray-700">Export to CSV</button>
+                    <div class="flex gap-2">
+                        <button id="share-btn" class="px-4 py-2 bg-blue-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-blue-700 transition">Share</button>
+                        <button id="export-csv-btn" class="px-4 py-2 bg-gray-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-gray-700 transition">Export CSV</button>
+                    </div>
+                </div>
+                 <div id="summary-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center"></div>
+                <div id="filter-controls" class="hidden mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-lg shadow-md">
+                    <span class="font-semibold text-gray-700">Filter by:</span>
+                    <select id="rarity-filter" class="rounded-lg border-gray-300 shadow-sm"><option value="all">All Rarities</option></select>
+                    <select id="type-filter" class="rounded-lg border-gray-300 shadow-sm"><option value="all">All Types</option></select>
                 </div>
                 <div id="results-container" class="min-h-[200px] flex items-center justify-center"></div>
             </section>
@@ -88,64 +103,66 @@
         document.addEventListener('DOMContentLoaded', () => {
             const analyzeBtn = document.getElementById('analyze-btn');
             const resultsSection = document.getElementById('results-section');
+            const summaryContainer = document.getElementById('summary-container');
             const resultsContainer = document.getElementById('results-container');
-            
-            let currentAnalysisData = {};
+            const bulkCardInput = document.getElementById('bulk-card-input');
+            const cardModal = document.getElementById('card-modal');
             let priceChart = null;
+            let currentAnalysisData = {};
 
             const CURRENCY_CONVERSIONS_TO_USD = { EUR: 1.08, GBP: 1.27, USD: 1 };
             const CURRENCY_CONVERSIONS_FROM_USD = { USD: 1, EUR: 0.92, GBP: 0.79 };
             const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£' };
 
+            // --- DECODE AND POPULATE FROM URL ---
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('data')) {
+                try {
+                    const decodedData = decodeURIComponent(urlParams.get('data'));
+                    bulkCardInput.value = decodedData;
+                    analyzeBtn.click();
+                } catch (e) { console.error("Failed to decode data from URL", e); }
+            }
+
             document.getElementById('card-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const bulkInput = document.getElementById('bulk-card-input').value;
-
-                const cardInputs = parseIntelligent(bulkInput);
+                const cardInputs = parseIntelligent(bulkCardInput.value);
                 if (cardInputs.length === 0) {
-                    alert('Could not parse any valid cards from your list. Please ensure each card has a name and a price on separate lines.');
+                    alert('Could not parse any valid cards. Please check your list format.');
                     return;
                 }
-
                 setLoading(true);
                 resultsSection.classList.remove('hidden');
                 resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
                 try {
                     const analysis = await analyzeMarketPrices(cardInputs);
                     renderResults(analysis);
                 } catch (error) {
-                    resultsContainer.innerHTML = `<p class="text-red-600 font-semibold">An unexpected error occurred: ${error.message}</p>`;
-                } finally {
-                    setLoading(false);
-                }
+                    resultsContainer.innerHTML = `<p class="text-red-600 font-semibold">${error.message}</p>`;
+                } finally { setLoading(false); }
             });
 
-            function parseIntelligent(bulkInput) {
+            function parseIntelligent(text) {
+                const blocks = text.split(/\n\s*\n/g).filter(b => b.trim() !== '');
                 const cardInputs = [];
-                const blocks = bulkInput.split(/\n\s*\n/g).filter(b => b.trim() !== '');
                 let detectedCurrency = null;
 
                 for (const block of blocks) {
-                    const lines = block.split('\n').map(l => l.trim()).filter(l => l !== '');
+                    const lines = block.split('\n').map(l => l.trim()).filter(l => l);
                     if (lines.length === 0) continue;
 
                     let name = lines[0];
                     let priceInfo = null;
 
                     for (let i = 1; i < lines.length; i++) {
-                        const priceMatch = lines[i].match(/(\d+[,.]\d+)\s*([$€£])?/);
-                        if(priceMatch) {
-                            priceInfo = {
-                                price: parseFloat(priceMatch[1].replace(',', '.')),
-                                symbol: priceMatch[2]
-                            };
+                        const match = lines[i].match(/(\d+[,.]\d+)\s*([$€£])?/);
+                        if (match) {
+                            priceInfo = { price: parseFloat(match[1].replace(',', '.')), symbol: match[2] };
                             break;
                         }
                     }
 
                     if (!priceInfo) continue;
-
                     let inputCurrency = 'USD';
                     if (priceInfo.symbol === '€') inputCurrency = 'EUR';
                     else if (priceInfo.symbol === '£') inputCurrency = 'GBP';
@@ -155,132 +172,74 @@
                         document.getElementById('currency-select').value = detectedCurrency;
                     }
 
-                    const userPriceInUSD = priceInfo.price * (CURRENCY_CONVERSIONS_TO_USD[inputCurrency] || 1);
                     const isFoil = name.toLowerCase().includes('(foil)');
                     if (isFoil) name = name.replace(/\(foil\)/ig, '').trim();
 
-                    cardInputs.push({ name, userPriceInUSD, originalPrice: priceInfo.price, originalCurrency: inputCurrency, isFoil });
+                    cardInputs.push({
+                        name,
+                        userPriceInUSD: priceInfo.price * (CURRENCY_CONVERSIONS_TO_USD[inputCurrency] || 1),
+                        isFoil
+                    });
                 }
-                
                 return cardInputs;
             }
-            
+
             async function analyzeMarketPrices(cards) {
-                let combinedData = [];
+                let identifiers = cards.map(c => ({ name: c.name }));
+                // Scryfall API allows up to 75 identifiers per request. We'll chunk them.
+                const chunks = [];
+                for (let i = 0; i < identifiers.length; i += 75) {
+                    chunks.push(identifiers.slice(i, i + 75));
+                }
+
+                let scryfallData = [];
+                for (const chunk of chunks) {
+                    const response = await fetch('https://api.scryfall.com/cards/collection', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ identifiers: chunk }),
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch data from Scryfall API.');
+                    const result = await response.json();
+                    scryfallData = scryfallData.concat(result.data);
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
+                }
+                
                 let totalUserValueUSD = 0;
                 let totalMarketValueUSD = 0;
+                let allCards = [];
 
-                for (const card of cards) {
-                    totalUserValueUSD += card.userPriceInUSD;
-                    try {
-                        const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(card.name)}`);
-                        if (!response.ok) throw new Error(`API error for ${card.name}`);
-                        const cardData = await response.json();
-                        
-                        const priceKey = card.isFoil ? 'usd_foil' : 'usd';
-                        const marketPrice = parseFloat(cardData?.prices?.[priceKey]) || parseFloat(cardData?.prices?.usd) || 0;
-                        
+                cards.forEach(originalCard => {
+                    const cardData = scryfallData.find(sc => sc.name.toLowerCase() === originalCard.name.toLowerCase());
+                    totalUserValueUSD += originalCard.userPriceInUSD;
+
+                    if (cardData) {
+                        const priceKey = originalCard.isFoil ? 'usd_foil' : 'usd';
+                        const marketPrice = parseFloat(cardData.prices[priceKey]) || parseFloat(cardData.prices.usd) || 0;
                         totalMarketValueUSD += marketPrice;
-
-                        combinedData.push({ ...card, marketPrice, imageUrl: cardData.image_uris?.normal });
-                    } catch (error) {
-                        console.error(`Failed for ${card.name}:`, error);
-                        combinedData.push({ ...card, marketPrice: 0, error: `Could not find '${card.name}'.` });
+                        allCards.push({
+                            ...originalCard, marketPrice, imageUrl: cardData.image_uris?.normal,
+                            setData: cardData, trend: cardData.prices.usd_trend
+                        });
+                    } else {
+                        allCards.push({...originalCard, marketPrice: 0, error: `Could not find '${originalCard.name}'.`});
                     }
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
+                });
                 
-                return { totalUserValueUSD, totalMarketValueUSD, allCards: combinedData };
-            }
-
-            function setLoading(isLoading) {
-                if (isLoading) {
-                    analyzeBtn.disabled = true;
-                    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
-                    resultsContainer.innerHTML = '<div class="spinner mx-auto border-gray-500 border-l-blue-500"></div>';
-                } else {
-                    analyzeBtn.disabled = false;
-                    analyzeBtn.innerHTML = 'Analyze Prices';
-                }
+                return { totalUserValueUSD, totalMarketValueUSD, allCards };
             }
             
-            function renderResults(data) {
-                currentAnalysisData = data;
-                const displayCurrency = document.getElementById('currency-select').value;
-                const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
-                const symbol = CURRENCY_SYMBOLS[displayCurrency];
-                
-                const totalUserValueConverted = data.totalUserValueUSD * conversionRate;
-                const totalMarketValueConverted = data.totalMarketValueUSD * conversionRate;
-                const netValue = totalMarketValueConverted - totalUserValueConverted;
-
-                let summaryHtml = `
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-center">
-                        <div class="bg-gray-100 p-4 rounded-lg">
-                            <p class="text-sm text-gray-600">Your Total Cost</p>
-                            <p class="text-3xl font-bold text-gray-800">${symbol}${totalUserValueConverted.toFixed(2)}</p>
-                        </div>
-                        <div class="bg-gray-100 p-4 rounded-lg">
-                            <p class="text-sm text-gray-600">Total Market Value</p>
-                            <p class="text-3xl font-bold text-gray-800">${symbol}${totalMarketValueConverted.toFixed(2)}</p>
-                        </div>
-                        <div class="p-4 rounded-lg ${netValue >= 0 ? 'bg-green-100' : 'bg-red-100'}">
-                            <p class="text-sm ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">Net Value</p>
-                            <p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p>
-                        </div>
-                    </div>`;
-                
-                let listsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
-                listsHtml += createListHtml('Good Deals', data.allCards.filter(c => !c.error && (c.marketPrice > c.userPriceInUSD)), 'green', conversionRate, symbol);
-                listsHtml += createListHtml('Bad Deals', data.allCards.filter(c => !c.error && (c.marketPrice < c.userPriceInUSD)), 'red', conversionRate, symbol);
-                
-                if (data.allCards.some(c => c.error)) {
-                    listsHtml += `<div class="md:col-span-2 mt-4"><h3 class="text-xl font-semibold text-gray-700 mb-3">Unfound Cards</h3><ul class="space-y-2">${data.allCards.filter(c=>c.error).map(c=>`<li class="p-3 rounded-md highlight-gray"><strong>${c.name}</strong>: ${c.error}</li>`).join('')}</ul></div>`;
-                }
-                listsHtml += '</div>';
-                
-                resultsContainer.innerHTML = summaryHtml + listsHtml + `<div class="mt-8"><h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Your Price vs. Market Price</h3><div class="chart-container"><canvas id="priceChart"></canvas></div></div>`;
-                renderChart(data);
-                addResultEventListeners();
-            }
-
-            function createListHtml(title, cards, type, conversionRate, symbol) {
-                let html = `<div><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-semibold text-gray-700">${title}</h3><select class="sort-select text-sm rounded-md border-gray-300" data-list-type="${type}"><option value="diff_desc">Best Deal</option><option value="name_asc">Name (A-Z)</option></select></div>`;
-                if (cards.length > 0) {
-                    html += `<ul class="space-y-2 result-list" id="${type}-list">`;
-                    cards.forEach(card => {
-                        const marketPriceConverted = card.marketPrice * conversionRate;
-                        const userPriceConverted = card.userPriceInUSD * conversionRate;
-                        const diff = marketPriceConverted - userPriceConverted;
-                        html += `<li class="result-item p-3 rounded-md highlight-${type} flex justify-between items-center cursor-pointer" data-name="${card.name}" data-price="${userPriceConverted}" data-market="${marketPriceConverted}" data-image-url="${card.imageUrl || ''}" data-foil="${card.isFoil}"><span><strong>${card.name}${card.isFoil ? ' (Foil)' : ''}</strong></span><span class="font-semibold">${diff > 0 ? 'Saved' : 'Overpaid'} ${symbol}${Math.abs(diff).toFixed(2)}</span></li>`;
-                    });
-                    html += '</ul>';
-                } else {
-                    html += `<p class="text-gray-600 p-4 bg-gray-50 rounded-md">No cards in this category.</p>`;
-                }
-                html += '</div>';
-                return html;
-            }
-            
-            function addResultEventListeners() {
-                document.querySelectorAll('.result-item').forEach(item => {
-                    item.addEventListener('mouseenter', handleImagePreview);
-                    item.addEventListener('mouseleave', handleImagePreview);
-                    item.addEventListener('mousemove', handleImagePreview);
-                });
-                document.querySelectorAll('.sort-select').forEach(select => {
-                    select.addEventListener('change', (e) => sortResultList(e.target.dataset.listType, e.target.value));
-                });
-            }
-
             function sortResultList(listType, sortBy) {
                 const listEl = document.getElementById(`${listType}-list`);
                 if (!listEl) return;
                 const items = Array.from(listEl.querySelectorAll('li'));
+
                 items.sort((a, b) => {
-                    const aName = a.dataset.name, bName = b.dataset.name;
+                    const aName = a.dataset.name;
+                    const bName = b.dataset.name;
                     const aDiff = parseFloat(a.dataset.market) - parseFloat(a.dataset.price);
                     const bDiff = parseFloat(b.dataset.market) - parseFloat(b.dataset.price);
+
                     if (sortBy === 'name_asc') return aName.localeCompare(bName);
                     if (sortBy === 'diff_desc') return listType === 'green' ? bDiff - aDiff : aDiff - bDiff;
                     return 0;
@@ -289,24 +248,174 @@
                 items.forEach(item => listEl.appendChild(item));
             }
 
-            const imgPreview = document.getElementById('card-image-preview');
-            function handleImagePreview(e) {
-                const item = e.currentTarget;
-                if (e.type === 'mouseenter') {
-                    const url = item.dataset.imageUrl;
-                    if (url && url !== 'undefined') {
-                        imgPreview.src = url;
-                        imgPreview.style.display = 'block';
-                    }
-                } else if (e.type === 'mouseleave') {
-                    imgPreview.style.display = 'none';
-                } else if (e.type === 'mousemove') {
-                    imgPreview.style.left = `${e.clientX + 15}px`;
-                    imgPreview.style.top = `${e.clientY - (imgPreview.offsetHeight / 2)}px`;
+
+            function renderResults(data) {
+                currentAnalysisData = data;
+                applyFiltersAndRender();
+            }
+
+            function applyFiltersAndRender() {
+                const rarityFilter = document.getElementById('rarity-filter').value;
+                const typeFilter = document.getElementById('type-filter').value;
+
+                let filteredCards = currentAnalysisData.allCards;
+
+                if (rarityFilter !== 'all') {
+                    filteredCards = filteredCards.filter(c => c.setData && c.setData.rarity === rarityFilter);
+                }
+                if (typeFilter !== 'all') {
+                    filteredCards = filteredCards.filter(c => c.setData && c.setData.type_line.toLowerCase().includes(typeFilter));
+                }
+                
+                populateFilterOptions(currentAnalysisData.allCards);
+                document.getElementById('filter-controls').classList.remove('hidden');
+
+                const displayCurrency = document.getElementById('currency-select').value;
+                const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
+                const symbol = CURRENCY_SYMBOLS[displayCurrency];
+                
+                const totalUserValue = currentAnalysisData.totalUserValueUSD * conversionRate;
+                const totalMarketValue = currentAnalysisData.totalMarketValueUSD * conversionRate;
+                const netValue = totalMarketValue - totalUserValue;
+
+                summaryContainer.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow-md"><p class="text-sm text-gray-600">Your Total Cost</p><p class="text-3xl font-bold text-gray-800">${symbol}${totalUserValue.toFixed(2)}</p></div>
+                    <div class="bg-white p-6 rounded-lg shadow-md"><p class="text-sm text-gray-600">Total Market Value</p><p class="text-3xl font-bold text-gray-800">${symbol}${totalMarketValue.toFixed(2)}</p></div>
+                    <div class="p-6 rounded-lg shadow-md ${netValue >= 0 ? 'bg-green-100' : 'bg-red-100'}"><p class="text-sm font-semibold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">Net Value</p><p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p></div>
+                `;
+                
+                let listsHtml = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white p-6 rounded-lg shadow-lg">';
+                listsHtml += createListHtml('Good Deals', filteredCards.filter(c => !c.error && (c.marketPrice > c.userPriceInUSD)), 'green', conversionRate, symbol);
+                listsHtml += createListHtml('Bad Deals', filteredCards.filter(c => !c.error && (c.marketPrice < c.userPriceInUSD)), 'red', conversionRate, symbol);
+                
+                if (filteredCards.some(c => c.error)) {
+                    listsHtml += `<div class="lg:col-span-2 mt-4"><h3 class="text-xl font-semibold text-gray-700 mb-3">Unfound Cards</h3><ul class="space-y-2">${filteredCards.filter(c=>c.error).map(c=>`<li class="p-3 rounded-md highlight-gray"><strong>${c.name}</strong>: ${c.error}</li>`).join('')}</ul></div>`;
+                }
+
+                listsHtml += '</div>';
+                
+                resultsContainer.innerHTML = listsHtml + `<div class="mt-8 bg-white p-6 rounded-lg shadow-lg"><h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Your Price vs. Market Price</h3><div class="chart-container"><canvas id="priceChart"></canvas></div></div>`;
+                renderChart({ allCards: filteredCards });
+                addResultEventListeners();
+            }
+
+            function createListHtml(title, cards, type, conversionRate, symbol) {
+                let html = `<div><div class="flex justify-between items-center mb-3"><h3 class="text-xl font-semibold text-gray-700">${title}</h3><select class="sort-select text-sm rounded-md border-gray-300 shadow-sm" data-list-type="${type}"><option value="diff_desc">Best Deal</option><option value="name_asc">Name (A-Z)</option></select></div><ul class="space-y-2 result-list" id="${type}-list">`;
+                if (cards.length === 0) {
+                    return html + '<p class="text-gray-500 p-4 bg-gray-100 rounded-md">No cards match filters.</p></div>';
+                }
+                cards.forEach(card => {
+                    const marketPriceConverted = card.marketPrice * conversionRate;
+                    const userPriceConverted = card.userPriceInUSD * conversionRate;
+                    const diff = marketPriceConverted - userPriceConverted;
+                    const trendIcon = card.trend === 'up' ? '▲' : card.trend === 'down' ? '▼' : '●';
+                    html += `<li class="result-item p-3 rounded-lg highlight-${type} flex justify-between items-center cursor-pointer transition hover:shadow-lg hover:scale-105" 
+                        data-card-index="${currentAnalysisData.allCards.indexOf(card)}">
+                        <div><strong>${card.name}${card.isFoil ? ' (Foil)' : ''}</strong></div>
+                        <div class="flex items-center gap-2"><span class="trend-${card.trend}" title="Price Trend: ${card.trend}">${trendIcon}</span> <span class="font-semibold">${symbol}${Math.abs(diff).toFixed(2)}</span></div></li>`;
+                });
+                return html + '</ul></div>';
+            }
+
+            function addResultEventListeners() {
+                document.querySelectorAll('.result-item').forEach(item => {
+                    item.addEventListener('click', (e) => showModal(e.currentTarget.dataset.cardIndex));
+                });
+                document.querySelectorAll('.sort-select').forEach(select => {
+                     select.addEventListener('change', (e) => sortResultList(e.target.dataset.listType, e.target.value));
+                });
+            }
+
+            function showModal(cardIndex) {
+                const card = currentAnalysisData.allCards[cardIndex];
+                if (!card) return;
+
+                const displayCurrency = document.getElementById('currency-select').value;
+                const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
+                const symbol = CURRENCY_SYMBOLS[displayCurrency];
+                
+                const modalBody = document.getElementById('modal-body');
+                modalBody.innerHTML = `
+                    <div><img src="${card.imageUrl}" alt="${card.name}" class="rounded-lg shadow-lg w-full"></div>
+                    <div class="prose max-w-none">
+                        <h2>${card.name}</h2>
+                        <p><strong>Set:</strong> ${card.setData.set_name}</p>
+                        <p><strong>Rarity:</strong> <span class="capitalize">${card.setData.rarity}</span></p>
+                        <p><strong>Your Price:</strong> ${symbol}${(card.userPriceInUSD * conversionRate).toFixed(2)}</p>
+                        <p><strong>Market Price:</strong> ${symbol}${(card.marketPrice * conversionRate).toFixed(2)}</p>
+                        <hr>
+                        <p>${card.setData.oracle_text.replace(/\n/g, '<br>')}</p>
+                    </div>`;
+                cardModal.classList.add('active');
+            }
+
+            cardModal.addEventListener('click', (e) => {
+                if (e.target === cardModal) cardModal.classList.remove('active');
+            });
+
+            function populateFilterOptions(cards) {
+                const rarities = [...new Set(cards.map(c => c.setData?.rarity).filter(Boolean))];
+                const types = [...new Set(cards.flatMap(c => c.setData?.type_line.split('//')[0].trim().split('—')[0].trim().split(' ')).filter(Boolean))];
+
+                const rarityFilter = document.getElementById('rarity-filter');
+                const currentRarity = rarityFilter.value;
+                rarityFilter.innerHTML = '<option value="all">All Rarities</option>';
+                rarities.forEach(r => rarityFilter.innerHTML += `<option value="${r}" ${r===currentRarity ? 'selected':''}>${r.charAt(0).toUpperCase() + r.slice(1)}</option>`);
+
+                const typeFilter = document.getElementById('type-filter');
+                const currentType = typeFilter.value;
+                typeFilter.innerHTML = '<option value="all">All Types</option>';
+                types.forEach(t => typeFilter.innerHTML += `<option value="${t.toLowerCase()}" ${t.toLowerCase()===currentType ? 'selected':''}>${t}</option>`);
+            }
+
+            document.getElementById('rarity-filter').addEventListener('change', applyFiltersAndRender);
+            document.getElementById('type-filter').addEventListener('change', applyFiltersAndRender);
+            document.getElementById('currency-select').addEventListener('change', () => {
+                if (currentAnalysisData.allCards) applyFiltersAndRender();
+            });
+            document.getElementById('share-btn').addEventListener('click', () => {
+                const dataToShare = encodeURIComponent(bulkCardInput.value);
+                const url = `${window.location.origin}${window.location.pathname}?data=${dataToShare}`;
+                navigator.clipboard.writeText(url).then(() => alert('Shareable link copied to clipboard!'), () => alert('Failed to copy link.'));
+            });
+
+            function setLoading(isLoading) {
+                if (isLoading) {
+                    analyzeBtn.disabled = true;
+                    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+                    resultsContainer.innerHTML = '<div class="spinner mx-auto border-gray-500 border-l-blue-500"></div>';
+                    summaryContainer.innerHTML = '';
+                } else {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = 'Analyze';
                 }
             }
-            
-            document.getElementById('export-csv-btn').addEventListener('click', () => {
+
+            function renderChart(data) {
+                const chartEl = document.getElementById('priceChart');
+                if (!chartEl) return;
+                const ctx = chartEl.getContext('2d');
+                if (priceChart) priceChart.destroy();
+                
+                const displayCurrency = document.getElementById('currency-select').value;
+                const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
+                const symbol = CURRENCY_SYMBOLS[displayCurrency];
+                const filteredCards = data.allCards.filter(c => !c.error);
+
+                priceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: filteredCards.map(c => c.name.length > 20 ? c.name.substring(0,17)+'...' : c.name),
+                        datasets: [
+                            { label: `Your Price (${symbol})`, data: filteredCards.map(c => c.userPriceInUSD * conversionRate), backgroundColor: 'rgba(59, 130, 246, 0.7)' },
+                            { label: `Market Price (${symbol})`, data: filteredCards.map(c => c.marketPrice * conversionRate), backgroundColor: 'rgba(16, 185, 129, 0.7)' }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: `Price (${symbol})` } }, x: { grid: { display: false } } } }
+                });
+            }
+
+             document.getElementById('export-csv-btn').addEventListener('click', () => {
                 if(!currentAnalysisData.allCards) return;
                 const displayCurrency = document.getElementById('currency-select').value;
                 const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
@@ -327,40 +436,6 @@
                 link.click();
                 document.body.removeChild(link);
             });
-
-            document.getElementById('currency-select').addEventListener('change', () => {
-                if (currentAnalysisData.allCards) renderResults(currentAnalysisData);
-            });
-
-            function renderChart(data) {
-                const chartEl = document.getElementById('priceChart');
-                if (!chartEl) return;
-                const ctx = chartEl.getContext('2d');
-                if (priceChart) {
-                    priceChart.destroy();
-                }
-                
-                const displayCurrency = document.getElementById('currency-select').value;
-                const conversionRate = CURRENCY_CONVERSIONS_FROM_USD[displayCurrency];
-                const symbol = CURRENCY_SYMBOLS[displayCurrency];
-                const filteredCards = data.allCards.filter(c => !c.error);
-
-                priceChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: filteredCards.map(c => c.name.length > 20 ? c.name.substring(0,17)+'...' : c.name),
-                        datasets: [
-                            { label: `Your Price (${symbol})`, data: filteredCards.map(c => c.userPriceInUSD * conversionRate), backgroundColor: 'rgba(59, 130, 246, 0.7)' },
-                            { label: `Market Price (${symbol})`, data: filteredCards.map(c => c.marketPrice * conversionRate), backgroundColor: 'rgba(16, 185, 129, 0.7)' }
-                        ]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { position: 'top' } },
-                        scales: { y: { beginAtZero: true, title: { display: true, text: `Price (${symbol})` } }, x: { grid: { display: false } } }
-                    }
-                });
-            }
         });
     </script>
 </body>
