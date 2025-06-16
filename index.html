@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive MTG Price Analyzer (Full-Featured)</title>
+    <title>Interactive MTG Price Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Warm Neutral Harmony -->
-    <!-- Application Structure Plan: Evolved to a full-stack, stateful application using Firebase for authentication and Firestore for data persistence. The user flow is now: Auth -> Collection Management -> Analysis. This architecture supports saved user data, a core requirement for a robust tool. The app is modularized into sections for authentication, collection management, and the analyzer itself, which are conditionally rendered based on user state. -->
-    <!-- Visualization & Content Choices: Retains the core grouped bar chart for price comparison. Adds: 1) A floating card image on hover for quick visual identification. 2) A net profit/loss summary card for at-a-glance collection performance. 3) Sorting controls for user-driven data exploration. 4) An export-to-CSV function for data portability. These choices transform the app from a simple calculator into a comprehensive management tool. -->
+    <!-- Application Structure Plan: Simplified to a single-session, client-side tool. The user flow is direct: Input -> Analyze -> Results. All authentication and database logic has been removed to create a streamlined, immediate-use application. -->
+    <!-- Visualization & Content Choices: Retains the core feature set for analysis: grouped bar chart, floating card image on hover, net profit/loss summary, sorting controls, and CSV export. The focus is on providing a rich analysis experience within a single session. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -32,19 +32,6 @@
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
-        [data-tooltip]:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 4px 8px;
-            background-color: #333;
-            color: white;
-            border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
-        }
     </style>
 </head>
 <body class="bg-[#f8f9fa]">
@@ -53,53 +40,22 @@
     <img id="card-image-preview" src="" alt="Card Image Preview" class="w-48">
 
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="flex justify-between items-center mb-10">
-            <div>
-                 <h1 class="text-3xl md:text-4xl font-bold text-gray-800">MTG Market Price Analyzer</h1>
-                 <p class="mt-2 text-md text-gray-600">Your Personal Collection Valuation Tool</p>
-            </div>
-            <div id="auth-container"></div>
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">MTG Market Price Analyzer</h1>
+            <p class="mt-2 text-md text-gray-600">Your Personal Collection Valuation Tool</p>
         </header>
 
-        <!-- Auth Section -->
-        <section id="auth-section" class="bg-white p-8 rounded-2xl shadow-lg max-w-md mx-auto">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Welcome</h2>
-             <div class="space-y-4">
-                <input type="email" id="email-input" placeholder="Email" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="password" id="password-input" placeholder="Password" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                <p id="auth-error" class="text-red-500 text-sm h-4"></p>
-                <div class="flex gap-4">
-                    <button id="login-btn" class="flex-1 px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600">Login</button>
-                    <button id="signup-btn" class="flex-1 px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600">Sign Up</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- App Section (Hidden by default) -->
-        <main id="app-section" class="hidden space-y-12">
-            <!-- Collection Management Section -->
-            <section id="collection-manager" class="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Your Collections</h2>
-                <div id="collections-list" class="space-y-3 mb-6"></div>
-                <div class="flex gap-4">
-                    <input type="text" id="new-collection-name" placeholder="New Collection Name" class="flex-grow px-4 py-2 border border-gray-300 rounded-lg">
-                    <button id="add-collection-btn" class="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600">Create</button>
-                </div>
-            </section>
-            
-            <!-- Analyzer Tool Section (Populated when a collection is selected) -->
-            <section id="analyzer-tool" class="hidden bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
-                <div class="flex justify-between items-start">
-                    <div class="prose max-w-none mb-6">
-                        <h2 id="collection-title" class="text-2xl font-semibold text-gray-700"></h2>
-                        <p>Paste your list below. The tool will parse card names and prices, and recognize "(foil)".</p>
-                    </div>
-                    <button id="back-to-collections" class="text-sm text-blue-600 hover:underline">← Back to Collections</button>
+        <main class="space-y-12">
+            <!-- Analyzer Tool Section -->
+            <section id="analyzer-tool" class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
+                <div class="prose max-w-none mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-700">Analyze Your Collection</h2>
+                    <p>Paste your list below. The tool will parse card names and prices, and recognize "(foil)".</p>
                 </div>
 
                 <form id="card-form">
                      <div class="form-group flex flex-col">
-                        <textarea id="bulk-card-input" class="w-full h-64 p-3 border border-gray-300 rounded-md shadow-sm font-mono text-sm"></textarea>
+                        <textarea id="bulk-card-input" class="w-full h-64 p-3 border border-gray-300 rounded-md shadow-sm font-mono text-sm" placeholder="Example format:&#10;Arbor Armament&#10;NM&#10;0,20 €&#10;1&#10;&#10;Lightning Bolt (foil)&#10;NM&#10;1,50 €&#10;1"></textarea>
                     </div>
                     <div class="flex items-center gap-4 mt-4">
                         <button type="submit" id="analyze-btn" class="w-auto flex items-center gap-2 justify-center text-center px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600">
@@ -128,447 +84,304 @@
         </main>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFirestore, doc, collection, addDoc, getDocs, deleteDoc, updateDoc, serverTimestamp, query, where, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const resultsSection = document.getElementById('results-section');
+            const resultsContainer = document.getElementById('results-container');
+            
+            let priceChart = null;
+            let currentAnalysisData = {};
 
-        const firebaseConfig = __firebase_config__; // This will be replaced by the environment
+            const CURRENCY_CONVERSIONS = { USD: 1, EUR: 0.92, GBP: 0.79 };
+            const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£' };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+            // --- ANALYSIS LOGIC ---
+            document.getElementById('card-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const bulkInput = document.getElementById('bulk-card-input').value;
 
-        const authSection = document.getElementById('auth-section');
-        const appSection = document.getElementById('app-section');
-        const authContainer = document.getElementById('auth-container');
-        const authError = document.getElementById('auth-error');
-        const analyzeBtn = document.getElementById('analyze-btn');
-
-        let currentUser = null;
-        let currentCollectionId = null;
-
-        const CURRENCY_CONVERSIONS = { USD: 1, EUR: 0.92, GBP: 0.79 };
-        const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£' };
-        
-        // --- AUTH LOGIC ---
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            if (user) {
-                authSection.classList.add('hidden');
-                appSection.classList.remove('hidden');
-                authContainer.innerHTML = `<div class="flex items-center gap-4"><span class="text-sm text-gray-600">${user.email}</span><button id="logout-btn" class="px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-red-600">Logout</button></div>`;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-                loadCollections();
-                showCollectionView();
-            } else {
-                authSection.classList.remove('hidden');
-                appSection.classList.add('hidden');
-                authContainer.innerHTML = '';
-            }
-        });
-
-        document.getElementById('login-btn').addEventListener('click', async () => {
-            const email = document.getElementById('email-input').value;
-            const password = document.getElementById('password-input').value;
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                authError.textContent = '';
-            } catch (error) {
-                authError.textContent = error.message;
-            }
-        });
-
-        document.getElementById('signup-btn').addEventListener('click', async () => {
-             const email = document.getElementById('email-input').value;
-            const password = document.getElementById('password-input').value;
-            try {
-                await createUserWithEmailAndPassword(auth, email, password);
-                authError.textContent = '';
-            } catch (error) {
-                authError.textContent = error.message;
-            }
-        });
-
-        // --- COLLECTION MANAGEMENT ---
-        const collectionsList = document.getElementById('collections-list');
-        const addCollectionBtn = document.getElementById('add-collection-btn');
-        const newCollectionNameInput = document.getElementById('new-collection-name');
-
-        const loadCollections = async () => {
-            if (!currentUser) return;
-            const q = query(collection(db, `users/${currentUser.uid}/collections`));
-            const querySnapshot = await getDocs(q);
-            collectionsList.innerHTML = '';
-            if (querySnapshot.empty) {
-                collectionsList.innerHTML = '<p class="text-gray-500">No collections yet. Create one below!</p>';
-                return;
-            }
-            querySnapshot.forEach((doc) => {
-                const coll = doc.data();
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-lg border';
-                div.innerHTML = `
-                    <span class="font-semibold">${coll.name}</span>
-                    <div class="flex gap-2">
-                        <button data-id="${doc.id}" class="load-btn px-3 py-1 text-sm bg-green-500 text-white rounded-md hover:bg-green-600">Load</button>
-                        <button data-id="${doc.id}" class="delete-btn px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600">Delete</button>
-                    </div>`;
-                collectionsList.appendChild(div);
-            });
-        };
-        
-        addCollectionBtn.addEventListener('click', async () => {
-            const name = newCollectionNameInput.value.trim();
-            if (name && currentUser) {
-                await addDoc(collection(db, `users/${currentUser.uid}/collections`), {
-                    name: name,
-                    content: '',
-                    createdAt: serverTimestamp()
-                });
-                newCollectionNameInput.value = '';
-                loadCollections();
-            }
-        });
-
-        collectionsList.addEventListener('click', async (e) => {
-            const id = e.target.dataset.id;
-            if (!id) return;
-
-            if (e.target.classList.contains('delete-btn')) {
-                if (confirm('Are you sure you want to delete this collection?')) {
-                    await deleteDoc(doc(db, `users/${currentUser.uid}/collections`, id));
-                    loadCollections();
+                const cardInputs = parseBulkInput(bulkInput);
+                if (cardInputs.length === 0) {
+                    alert('Could not parse any cards from your list.');
+                    return;
                 }
-            } else if (e.target.classList.contains('load-btn')) {
-                loadCollection(id);
-            }
-        });
-        
-        const loadCollection = async (id) => {
-            const docRef = doc(db, `users/${currentUser.uid}/collections`, id);
-            const docSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/collections`), where('__name__', '==', id)));
-            if (!docSnap.empty) {
-                const collData = docSnap.docs[0].data();
-                currentCollectionId = id;
-                document.getElementById('collection-title').textContent = `Analyzing: ${collData.name}`;
-                document.getElementById('bulk-card-input').value = collData.content || '';
-                showAnalyzerView();
-            }
-        };
 
-        // --- VIEW MANAGEMENT ---
-        const collectionManager = document.getElementById('collection-manager');
-        const analyzerTool = document.getElementById('analyzer-tool');
-        const resultsSection = document.getElementById('results-section');
+                setLoading(true);
+                resultsSection.classList.remove('hidden');
+                resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        function showCollectionView() {
-            collectionManager.classList.remove('hidden');
-            analyzerTool.classList.add('hidden');
-            resultsSection.classList.add('hidden');
-        }
-        function showAnalyzerView() {
-            collectionManager.classList.add('hidden');
-            analyzerTool.classList.remove('hidden');
-            resultsSection.classList.add('hidden');
-        }
-        document.getElementById('back-to-collections').addEventListener('click', showCollectionView);
+                try {
+                    const analysis = await analyzeMarketPrices(cardInputs);
+                    renderResults(analysis);
+                } catch (error) {
+                    resultsContainer.innerHTML = `<p class="text-red-600 font-semibold">An unexpected error occurred: ${error.message}</p>`;
+                } finally {
+                    setLoading(false);
+                }
+            });
 
-        // --- ANALYSIS LOGIC ---
-        document.getElementById('card-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const bulkInput = document.getElementById('bulk-card-input').value;
-            if (!currentUser || !currentCollectionId) return;
+            function parseBulkInput(bulkInput) {
+                const lines = bulkInput.split('\n').filter(line => line.trim() !== '');
+                const cardInputs = [];
 
-            // Save content to firestore
-            const docRef = doc(db, `users/${currentUser.uid}/collections`, currentCollectionId);
-            await updateDoc(docRef, { content: bulkInput });
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (line.includes('€') || line.includes('$') || line.includes('£')) {
+                        let name = lines[i - 2] ? lines[i-2].trim() : 'Unknown Card';
+                        const isFoil = name.toLowerCase().includes('(foil)');
+                        if(isFoil) name = name.replace(/\(foil\)/ig, '').trim();
 
-            // Parse and analyze
-            const cardInputs = parseBulkInput(bulkInput);
-            if (cardInputs.length === 0) {
-                 alert('Could not parse any cards from your list.');
-                 return;
-            }
+                        const priceString = line.trim();
+                        const cleanedPrice = priceString.replace(/[€$£]/g, '').replace(/,/g, '.').trim();
+                        const userPrice = parseFloat(cleanedPrice);
 
-            setLoading(true);
-            resultsSection.classList.remove('hidden');
-            resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            try {
-                const analysis = await analyzeMarketPrices(cardInputs);
-                renderResults(analysis);
-            } catch (error) {
-                resultsContainer.innerHTML = `<p class="text-red-600 font-semibold">An unexpected error occurred: ${error.message}</p>`;
-            } finally {
-                setLoading(false);
-            }
-        });
-
-        function parseBulkInput(bulkInput) {
-            const lines = bulkInput.split('\n').filter(line => line.trim() !== '');
-            const cardInputs = [];
-
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                if (line.includes('€') || line.includes('$') || line.includes('£')) {
-                    let name = lines[i - 2] ? lines[i-2].trim() : 'Unknown Card';
-                    const isFoil = name.toLowerCase().includes('(foil)');
-                    if(isFoil) name = name.replace(/\(foil\)/ig, '').trim();
-
-                    const priceString = line.trim();
-                    const cleanedPrice = priceString.replace(/[€$£,]/g, '.').replace(/,/g, '.').trim();
-                    const userPrice = parseFloat(cleanedPrice);
-
-                    if (name && !isNaN(userPrice)) {
-                        cardInputs.push({ name, userPrice, isFoil });
+                        if (name && !isNaN(userPrice)) {
+                            cardInputs.push({ name, userPrice, isFoil });
+                        }
                     }
                 }
+                return cardInputs;
             }
-            return cardInputs;
-        }
-        
-        async function analyzeMarketPrices(cards) {
-            let combinedData = [];
-            let totalUserValue = 0;
-            let totalMarketValueUSD = 0;
+            
+            async function analyzeMarketPrices(cards) {
+                let combinedData = [];
+                let totalUserValue = 0;
+                let totalMarketValueUSD = 0;
 
-            for (const card of cards) {
-                try {
-                    const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(card.name)}`);
-                    if (!response.ok) throw new Error(`API error ${response.status}`);
-                    const cardData = await response.json();
-                    
-                    const priceKey = card.isFoil ? 'usd_foil' : 'usd';
-                    const marketPrice = parseFloat(cardData?.prices?.[priceKey]) || parseFloat(cardData?.prices?.usd) || 0; // Fallback to non-foil
-                    
-                    totalUserValue += card.userPrice;
-                    totalMarketValueUSD += marketPrice;
+                for (const card of cards) {
+                    try {
+                        const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(card.name)}`);
+                        if (!response.ok) throw new Error(`API error ${response.status}`);
+                        const cardData = await response.json();
+                        
+                        const priceKey = card.isFoil ? 'usd_foil' : 'usd';
+                        const marketPrice = parseFloat(cardData?.prices?.[priceKey]) || parseFloat(cardData?.prices?.usd) || 0; // Fallback to non-foil
+                        
+                        totalUserValue += card.userPrice;
+                        totalMarketValueUSD += marketPrice;
 
-                    combinedData.push({
-                        ...card,
-                        marketPrice: marketPrice,
-                        priceDifference: card.userPrice - marketPrice, // This difference is EUR vs USD, will be corrected on render
-                        imageUrl: cardData.image_uris?.normal
-                    });
-                } catch (error) {
-                    console.error(`Failed for ${card.name}:`, error);
-                    totalUserValue += card.userPrice;
-                    combinedData.push({
-                       ...card, marketPrice: 0, priceDifference: card.userPrice,
-                       error: `Could not find '${card.name}'.`
-                    });
+                        combinedData.push({
+                            ...card,
+                            marketPrice: marketPrice,
+                            imageUrl: cardData.image_uris?.normal
+                        });
+                    } catch (error) {
+                        console.error(`Failed for ${card.name}:`, error);
+                        totalUserValue += card.userPrice;
+                        combinedData.push({
+                            ...card, marketPrice: 0,
+                            error: `Could not find '${card.name}'.`
+                        });
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
                 }
-                await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
+                
+                return {
+                    totalUserValue, // Assumed to be in EUR based on user example
+                    totalMarketValueUSD,
+                    allCards: combinedData,
+                };
+            }
+
+            function setLoading(isLoading) {
+                if (isLoading) {
+                    analyzeBtn.disabled = true;
+                    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+                    resultsContainer.innerHTML = '<div class="spinner mx-auto border-gray-500 border-l-blue-500"></div>';
+                } else {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = 'Analyze Prices';
+                }
             }
             
-            return {
-                cardCount: cards.length,
-                totalUserValue, // In EUR
-                totalMarketValueUSD, // In USD
-                allCards: combinedData,
-            };
-        }
+            function renderResults(data) {
+                currentAnalysisData = data;
+                const selectedCurrency = document.getElementById('currency-select').value;
+                const conversionRate = CURRENCY_CONVERSIONS[selectedCurrency];
+                const symbol = CURRENCY_SYMBOLS[selectedCurrency];
+                
+                const totalUserValueConverted = data.totalUserValue; // Assuming user inputs EUR, not converting
+                const totalMarketValueConverted = data.totalMarketValueUSD * conversionRate;
+                const netValue = totalMarketValueConverted - totalUserValueConverted;
 
-        function setLoading(isLoading) {
-            if (isLoading) {
-                analyzeBtn.disabled = true;
-                analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
-                resultsContainer.innerHTML = '<div class="spinner mx-auto border-gray-500 border-l-blue-500"></div>';
-            } else {
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'Analyze Prices';
+                let summaryHtml = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-center">
+                        <div class="bg-gray-100 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Your Total Cost</p>
+                            <p class="text-3xl font-bold text-gray-800">${symbol}${totalUserValueConverted.toFixed(2)}</p>
+                        </div>
+                        <div class="bg-gray-100 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Total Market Value</p>
+                            <p class="text-3xl font-bold text-gray-800">${symbol}${totalMarketValueConverted.toFixed(2)}</p>
+                        </div>
+                        <div class="p-4 rounded-lg ${netValue >= 0 ? 'bg-green-100' : 'bg-red-100'}">
+                            <p class="text-sm ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">Net Value</p>
+                            <p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p>
+                        </div>
+                    </div>
+                `;
+                
+                let listsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
+                listsHtml += createListHtml('Good Deals', data.allCards.filter(c => !c.error && (c.marketPrice * conversionRate) > c.userPrice), 'green', conversionRate, symbol);
+                listsHtml += createListHtml('Bad Deals', data.allCards.filter(c => !c.error && (c.marketPrice * conversionRate) < c.userPrice), 'red', conversionRate, symbol);
+                
+                if (data.allCards.some(c => c.error)) {
+                    listsHtml += `<div class="md:col-span-2 mt-4">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-3">Unfound Cards</h3>
+                        <ul class="space-y-2">${data.allCards.filter(c=>c.error).map(c=>`<li class="p-3 rounded-md highlight-gray"><strong>${c.name}</strong>: ${c.error}</li>`).join('')}</ul>
+                    </div>`;
+                }
+                listsHtml += '</div>';
+
+                let chartHtml = `<div class="mt-8"><h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Your Price vs. Market Price</h3><div class="chart-container"><canvas id="priceChart"></canvas></div></div>`;
+                
+                resultsContainer.innerHTML = summaryHtml + listsHtml + chartHtml;
+                renderChart(data);
+
+                addResultEventListeners();
             }
-        }
-        
-        let currentAnalysisData = {};
-        
-        function renderResults(data) {
-            currentAnalysisData = data;
-            const selectedCurrency = document.getElementById('currency-select').value;
-            const conversionRate = CURRENCY_CONVERSIONS[selectedCurrency];
-            const symbol = CURRENCY_SYMBOLS[selectedCurrency];
 
-            const totalMarketValueConverted = data.totalMarketValueUSD * conversionRate;
-            const netValue = totalMarketValueConverted - data.totalUserValue;
-
-            let summaryHtml = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-center">
-                    <div class="bg-gray-100 p-4 rounded-lg">
-                        <p class="text-sm text-gray-600">Your Total Cost</p>
-                        <p class="text-3xl font-bold text-gray-800">${symbol}${data.totalUserValue.toFixed(2)}</p>
-                    </div>
-                    <div class="bg-gray-100 p-4 rounded-lg">
-                        <p class="text-sm text-gray-600">Total Market Value</p>
-                        <p class="text-3xl font-bold text-gray-800">${symbol}${totalMarketValueConverted.toFixed(2)}</p>
-                    </div>
-                     <div class="p-4 rounded-lg ${netValue >= 0 ? 'bg-green-100' : 'bg-red-100'}">
-                        <p class="text-sm ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">Net Value</p>
-                        <p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p>
-                    </div>
-                </div>
-            `;
-            
-            const goodDeals = data.allCards.filter(c => !c.error && (c.marketPrice * conversionRate) > c.userPrice);
-            const badDeals = data.allCards.filter(c => !c.error && (c.marketPrice * conversionRate) < c.userPrice);
-            
-            let listsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
-            listsHtml += createListHtml('Good Deals', goodDeals, 'green', conversionRate, symbol);
-            listsHtml += createListHtml('Bad Deals', badDeals, 'red', conversionRate, symbol);
-            
-            if (data.allCards.some(c => c.error)) {
-                listsHtml += `<div class="md:col-span-2 mt-4">
-                    <h3 class="text-xl font-semibold text-gray-700 mb-3">Unfound Cards</h3>
-                    <ul class="space-y-2">${data.allCards.filter(c=>c.error).map(c=>`<li class="p-3 rounded-md highlight-gray"><strong>${c.name}</strong>: ${c.error}</li>`).join('')}</ul>
-                </div>`;
+            function createListHtml(title, cards, type, conversionRate, symbol) {
+                let html = `<div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xl font-semibold text-gray-700">${title}</h3>
+                        <select class="sort-select text-sm rounded-md border-gray-300" data-list-type="${type}">
+                            <option value="diff_desc">Best Deal</option>
+                            <option value="name_asc">Name (A-Z)</option>
+                        </select>
+                    </div>`;
+                if (cards.length > 0) {
+                    html += `<ul class="space-y-2 result-list" id="${type}-list">`;
+                    cards.forEach(card => {
+                        const marketPriceConverted = card.marketPrice * conversionRate;
+                        const diff = marketPriceConverted - card.userPrice;
+                        html += `
+                            <li class="result-item p-3 rounded-md highlight-${type} flex justify-between items-center cursor-pointer" 
+                                data-name="${card.name}" data-price="${card.userPrice}" data-market="${marketPriceConverted}" data-image-url="${card.imageUrl || ''}" data-foil="${card.isFoil}">
+                                <span><strong>${card.name}${card.isFoil ? ' (Foil)' : ''}</strong></span>
+                                <span class="font-semibold">${diff > 0 ? 'Saved' : 'Overpaid'} ${symbol}${Math.abs(diff).toFixed(2)}</span>
+                            </li>`;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += `<p class="text-gray-600 p-4 bg-gray-50 rounded-md">No cards in this category.</p>`;
+                }
+                html += '</div>';
+                return html;
             }
-            listsHtml += '</div>';
-
-            let chartHtml = `<div class="mt-8"><h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Your Price vs. Market Price</h3><div class="chart-container"><canvas id="priceChart"></canvas></div></div>`;
             
-            resultsContainer.innerHTML = summaryHtml + listsHtml + chartHtml;
-            renderChart(data);
-
-            addResultEventListeners();
-        }
-
-        function createListHtml(title, cards, type, conversionRate, symbol) {
-            let html = `<div>
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xl font-semibold text-gray-700">${title}</h3>
-                    <select class="sort-select text-sm rounded-md border-gray-300" data-list-type="${type}">
-                        <option value="diff_desc">Best Deal</option>
-                        <option value="name_asc">Name (A-Z)</option>
-                    </select>
-                </div>`;
-            if (cards.length > 0) {
-                html += `<ul class="space-y-2 result-list" id="${type}-list">`;
-                cards.forEach(card => {
-                    const marketPriceConverted = card.marketPrice * conversionRate;
-                    const diff = marketPriceConverted - card.userPrice;
-                    html += `
-                        <li class="result-item p-3 rounded-md highlight-${type} flex justify-between items-center cursor-pointer" 
-                            data-name="${card.name}" data-price="${card.userPrice}" data-market="${marketPriceConverted}" data-image-url="${card.imageUrl || ''}">
-                            <span><strong>${card.name}${card.isFoil ? ' (Foil)' : ''}</strong></span>
-                            <span class="font-semibold">${diff > 0 ? 'Saved' : 'Overpaid'} ${symbol}${Math.abs(diff).toFixed(2)}</span>
-                        </li>`;
+            function addResultEventListeners() {
+                document.querySelectorAll('.result-item').forEach(item => {
+                    item.addEventListener('mouseenter', handleImagePreview);
+                    item.addEventListener('mouseleave', handleImagePreview);
+                    item.addEventListener('mousemove', handleImagePreview);
                 });
-                html += '</ul>';
-            } else {
-                 html += `<p class="text-gray-600 p-4 bg-gray-50 rounded-md">No cards in this category.</p>`;
+                document.querySelectorAll('.sort-select').forEach(select => {
+                    select.addEventListener('change', (e) => sortResultList(e.target.dataset.listType, e.target.value));
+                });
             }
-            html += '</div>';
-            return html;
-        }
-        
-        function addResultEventListeners() {
-            document.querySelectorAll('.result-item').forEach(item => {
-                item.addEventListener('mouseenter', handleImagePreview);
-                item.addEventListener('mouseleave', handleImagePreview);
-                item.addEventListener('mousemove', handleImagePreview);
-            });
-            document.querySelectorAll('.sort-select').forEach(select => {
-                select.addEventListener('change', (e) => sortResultList(e.target.dataset.listType, e.target.value));
-            })
-        }
 
-        // --- INTERACTIVITY (Sorting, Image Preview, Export) ---
-        function sortResultList(listType, sortBy) {
-            const listEl = document.getElementById(`${listType}-list`);
-            if (!listEl) return;
-            const items = Array.from(listEl.querySelectorAll('li'));
+            function sortResultList(listType, sortBy) {
+                const listEl = document.getElementById(`${listType}-list`);
+                if (!listEl) return;
+                const items = Array.from(listEl.querySelectorAll('li'));
 
-            items.sort((a, b) => {
-                const aName = a.dataset.name;
-                const bName = b.dataset.name;
-                const aDiff = parseFloat(a.dataset.market) - parseFloat(a.dataset.price);
-                const bDiff = parseFloat(b.dataset.market) - parseFloat(b.dataset.price);
+                items.sort((a, b) => {
+                    const aName = a.dataset.name;
+                    const bName = b.dataset.name;
+                    const aDiff = parseFloat(a.dataset.market) - parseFloat(a.dataset.price);
+                    const bDiff = parseFloat(b.dataset.market) - parseFloat(b.dataset.price);
 
-                if (sortBy === 'name_asc') {
-                    return aName.localeCompare(bName);
-                } else if (sortBy === 'diff_desc') {
-                    return listType === 'green' ? bDiff - aDiff : aDiff - bDiff;
+                    if (sortBy === 'name_asc') {
+                        return aName.localeCompare(bName);
+                    } else if (sortBy === 'diff_desc') {
+                        return listType === 'green' ? bDiff - aDiff : aDiff - bDiff;
+                    }
+                    return 0;
+                });
+
+                listEl.innerHTML = '';
+                items.forEach(item => listEl.appendChild(item));
+            }
+
+            const imgPreview = document.getElementById('card-image-preview');
+            function handleImagePreview(e) {
+                const item = e.currentTarget;
+                if (e.type === 'mouseenter') {
+                    const url = item.dataset.imageUrl;
+                    if (url && url !== 'undefined') {
+                        imgPreview.src = url;
+                        imgPreview.style.display = 'block';
+                    }
+                } else if (e.type === 'mouseleave') {
+                    imgPreview.style.display = 'none';
+                } else if (e.type === 'mousemove') {
+                    imgPreview.style.left = `${e.clientX + 15}px`;
+                    imgPreview.style.top = `${e.clientY - (imgPreview.offsetHeight / 2)}px`;
                 }
-            });
-
-            listEl.innerHTML = '';
-            items.forEach(item => listEl.appendChild(item));
-        }
-
-        const imgPreview = document.getElementById('card-image-preview');
-        function handleImagePreview(e) {
-            if (e.type === 'mouseenter') {
-                const url = e.target.dataset.imageUrl;
-                if (url && url !== 'undefined') {
-                    imgPreview.src = url;
-                    imgPreview.style.display = 'block';
-                }
-            } else if (e.type === 'mouseleave') {
-                imgPreview.style.display = 'none';
-            } else if (e.type === 'mousemove') {
-                imgPreview.style.left = `${e.clientX + 15}px`;
-                imgPreview.style.top = `${e.clientY - (imgPreview.offsetHeight/2)}px`;
             }
-        }
-        
-        document.getElementById('export-csv-btn').addEventListener('click', () => {
-            if(!currentAnalysisData.allCards) return;
-            let csvContent = "data:text/csv;charset=utf-8,Card Name,Is Foil,Your Price (EUR),Market Price (USD),Market Price (EUR),Difference (EUR)\n";
-            const conversionRate = CURRENCY_CONVERSIONS['EUR'];
-
-            currentAnalysisData.allCards.forEach(card => {
-                const marketPriceEUR = (card.marketPrice || 0) * conversionRate;
-                const difference = marketPriceEUR - card.userPrice;
-                const row = [
-                    `"${card.name}"`, card.isFoil, card.userPrice.toFixed(2), (card.marketPrice || 0).toFixed(2), marketPriceEUR.toFixed(2), difference.toFixed(2)
-                ].join(',');
-                csvContent += row + "\r\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `mtg_analysis_${currentCollectionId}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
-
-        document.getElementById('currency-select').addEventListener('change', () => {
-            if (currentAnalysisData.allCards) {
-                renderResults(currentAnalysisData);
-            }
-        });
-
-        // --- CHART LOGIC ---
-        let priceChart = null;
-        function renderChart(data) {
-            const chartEl = document.getElementById('priceChart');
-            if (!chartEl) return;
-            const ctx = chartEl.getContext('2d');
-            if (priceChart) priceChart.destroy();
             
-            const selectedCurrency = document.getElementById('currency-select').value;
-            const conversionRate = CURRENCY_CONVERSIONS[selectedCurrency];
-            const symbol = CURRENCY_SYMBOLS[selectedCurrency];
+            document.getElementById('export-csv-btn').addEventListener('click', () => {
+                if(!currentAnalysisData.allCards) return;
+                const selectedCurrency = document.getElementById('currency-select').value;
+                const conversionRate = CURRENCY_CONVERSIONS[selectedCurrency];
+                const symbol = CURRENCY_SYMBOLS[selectedCurrency];
 
-            const filteredCards = data.allCards.filter(c => !c.error);
-            priceChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: filteredCards.map(c => c.name.length > 20 ? c.name.substring(0,17)+'...' : c.name),
-                    datasets: [
-                        { label: `Your Price (${symbol})`, data: filteredCards.map(c => c.userPrice), backgroundColor: 'rgba(59, 130, 246, 0.7)' },
-                        { label: `Market Price (${symbol})`, data: filteredCards.map(c => c.marketPrice * conversionRate), backgroundColor: 'rgba(16, 185, 129, 0.7)' }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true, title: { display: true, text: `Price (${symbol})` } }, x: { grid: { display: false } } }
+                let csvContent = `data:text/csv;charset=utf-8,Card Name,Is Foil,Your Price (${symbol}),Market Price (USD),Market Price (${symbol}),Difference (${symbol})\n`;
+
+                currentAnalysisData.allCards.forEach(card => {
+                    const marketPriceConverted = (card.marketPrice || 0) * conversionRate;
+                    const difference = marketPriceConverted - card.userPrice;
+                    const row = [
+                        `"${card.name}"`, card.isFoil, card.userPrice.toFixed(2), (card.marketPrice || 0).toFixed(2), marketPriceConverted.toFixed(2), difference.toFixed(2)
+                    ].join(',');
+                    csvContent += row + "\r\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `mtg_analysis.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            document.getElementById('currency-select').addEventListener('change', () => {
+                if (currentAnalysisData.allCards) {
+                    renderResults(currentAnalysisData);
                 }
             });
-        }
+
+            function renderChart(data) {
+                const chartEl = document.getElementById('priceChart');
+                if (!chartEl) return;
+                const ctx = chartEl.getContext('2d');
+                if (priceChart) priceChart.destroy();
+                
+                const selectedCurrency = document.getElementById('currency-select').value;
+                const conversionRate = CURRENCY_CONVERSIONS[selectedCurrency];
+                const symbol = CURRENCY_SYMBOLS[selectedCurrency];
+
+                const filteredCards = data.allCards.filter(c => !c.error);
+                priceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: filteredCards.map(c => c.name.length > 20 ? c.name.substring(0,17)+'...' : c.name),
+                        datasets: [
+                            { label: `Your Price (${symbol})`, data: filteredCards.map(c => c.userPrice), backgroundColor: 'rgba(59, 130, 246, 0.7)' },
+                            { label: `Market Price (${symbol})`, data: filteredCards.map(c => c.marketPrice * conversionRate), backgroundColor: 'rgba(16, 185, 129, 0.7)' }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'top' } },
+                        scales: { y: { beginAtZero: true, title: { display: true, text: `Price (${symbol})` } }, x: { grid: { display: false } } }
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
