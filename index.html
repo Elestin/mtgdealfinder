@@ -186,7 +186,6 @@
 
             async function analyzeMarketPrices(cards) {
                 let identifiers = cards.map(c => ({ name: c.name }));
-                // Scryfall API allows up to 75 identifiers per request. We'll chunk them.
                 const chunks = [];
                 for (let i = 0; i < identifiers.length; i += 75) {
                     chunks.push(identifiers.slice(i, i + 75));
@@ -202,7 +201,7 @@
                     if (!response.ok) throw new Error('Failed to fetch data from Scryfall API.');
                     const result = await response.json();
                     scryfallData = scryfallData.concat(result.data);
-                    await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
                 
                 let totalUserValueUSD = 0;
@@ -235,12 +234,15 @@
                 const items = Array.from(listEl.querySelectorAll('li'));
 
                 items.sort((a, b) => {
-                    const aName = a.dataset.name;
-                    const bName = b.dataset.name;
-                    const aDiff = parseFloat(a.dataset.market) - parseFloat(a.dataset.price);
-                    const bDiff = parseFloat(b.dataset.market) - parseFloat(b.dataset.price);
+                    const aMarket = parseFloat(a.dataset.market);
+                    const bMarket = parseFloat(b.dataset.market);
+                    const aPrice = parseFloat(a.dataset.price);
+                    const bPrice = parseFloat(b.dataset.price);
+                    
+                    const aDiff = aMarket - aPrice;
+                    const bDiff = bMarket - bPrice;
 
-                    if (sortBy === 'name_asc') return aName.localeCompare(bName);
+                    if (sortBy === 'name_asc') return a.dataset.name.localeCompare(b.dataset.name);
                     if (sortBy === 'diff_desc') return listType === 'green' ? bDiff - aDiff : aDiff - bDiff;
                     return 0;
                 });
@@ -279,9 +281,9 @@
                 const netValue = totalMarketValue - totalUserValue;
 
                 summaryContainer.innerHTML = `
-                    <div class="bg-white p-6 rounded-lg shadow-md"><p class="text-sm text-gray-600">Your Total Cost</p><p class="text-3xl font-bold text-gray-800">${symbol}${totalUserValue.toFixed(2)}</p></div>
-                    <div class="bg-white p-6 rounded-lg shadow-md"><p class="text-sm text-gray-600">Total Market Value</p><p class="text-3xl font-bold text-gray-800">${symbol}${totalMarketValue.toFixed(2)}</p></div>
-                    <div class="p-6 rounded-lg shadow-md ${netValue >= 0 ? 'bg-green-100' : 'bg-red-100'}"><p class="text-sm font-semibold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">Net Value</p><p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p></div>
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center"><p class="text-sm text-gray-600">Your Total Cost</p><p class="text-3xl font-bold text-gray-800 mt-2">${symbol}${totalUserValue.toFixed(2)}</p></div>
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center"><p class="text-sm text-gray-600">Total Market Value</p><p class="text-3xl font-bold text-gray-800 mt-2">${symbol}${totalMarketValue.toFixed(2)}</p></div>
+                    <div class="p-6 rounded-lg shadow-md flex flex-col items-center justify-center ${netValue >= 0 ? 'bg-green-100' : 'bg-red-100'}"><p class="text-sm font-semibold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'}">Net Value</p><p class="text-3xl font-bold ${netValue >= 0 ? 'text-green-800' : 'text-red-800'} mt-2">${netValue >= 0 ? '+' : ''}${symbol}${netValue.toFixed(2)}</p></div>
                 `;
                 
                 let listsHtml = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white p-6 rounded-lg shadow-lg">';
@@ -310,7 +312,10 @@
                     const diff = marketPriceConverted - userPriceConverted;
                     const trendIcon = card.trend === 'up' ? '▲' : card.trend === 'down' ? '▼' : '●';
                     html += `<li class="result-item p-3 rounded-lg highlight-${type} flex justify-between items-center cursor-pointer transition hover:shadow-lg hover:scale-105" 
-                        data-card-index="${currentAnalysisData.allCards.indexOf(card)}">
+                        data-card-index="${currentAnalysisData.allCards.indexOf(card)}"
+                        data-name="${card.name}"
+                        data-price="${userPriceConverted}"
+                        data-market="${marketPriceConverted}">
                         <div><strong>${card.name}${card.isFoil ? ' (Foil)' : ''}</strong></div>
                         <div class="flex items-center gap-2"><span class="trend-${card.trend}" title="Price Trend: ${card.trend}">${trendIcon}</span> <span class="font-semibold">${symbol}${Math.abs(diff).toFixed(2)}</span></div></li>`;
                 });
